@@ -1,12 +1,23 @@
-export enum Suit {
-  Clubs = "Clubs",
-  Diamonds = "Diamonds",
-  Hearts = "Hearts",
-  Spades = "Spades",
-}
+export const SUITS = {
+  Clubs: { emoji: "♣️", short: "c", long: "Clubs" },
+  Diamonds: { emoji: "♦️", short: "d", long: "Diamonds" },
+  Hearts: { emoji: "♥️", short: "h", long: "Hearts" },
+  Spades: { emoji: "♠️", short: "s", long: "Spades " },
+} as const;
 
-const SUITS = [Suit.Clubs, Suit.Diamonds, Suit.Hearts, Suit.Spades];
-const R10_SUITS = SUITS.concat(SUITS.slice(0, 2));
+const SUITS_ABBREVIATED = {
+  [SUITS.Clubs.short]: SUITS.Clubs,
+  [SUITS.Diamonds.short]: SUITS.Diamonds,
+  [SUITS.Hearts.short]: SUITS.Hearts,
+  [SUITS.Spades.short]: SUITS.Spades,
+
+  [SUITS.Clubs.emoji]: SUITS.Clubs,
+  [SUITS.Diamonds.emoji]: SUITS.Diamonds,
+  [SUITS.Hearts.emoji]: SUITS.Hearts,
+  [SUITS.Spades.emoji]: SUITS.Spades,
+};
+
+type Suit = (typeof SUITS)[keyof typeof SUITS];
 
 export interface Card {
   suit: Suit;
@@ -16,13 +27,6 @@ export interface Card {
   value: number;
 }
 
-const EMOJIS = {
-  [Suit.Clubs]: "♣️",
-  [Suit.Diamonds]: "♦️",
-  [Suit.Hearts]: "♥️",
-  [Suit.Spades]: "♠️",
-};
-
 const FACES = {
   "1": "A",
   "11": "J",
@@ -30,15 +34,20 @@ const FACES = {
   "13": "K",
 } as const;
 
-function cardDisplay(suit: Suit, rank: number): string {
-  const icon = suit;
+const FACES_TO_RANK = {
+  [FACES[1]]: 1,
+  [FACES[11]]: 11,
+  [FACES[12]]: 12,
+  [FACES[13]]: 13,
+};
 
+function cardDisplay(suit: Suit, rank: number): string {
   const display =
     rank > 1 && rank <= 10
       ? rank
       : FACES[rank.toString() as keyof typeof FACES];
 
-  return `${display}${EMOJIS[icon]}`;
+  return `${display}${suit.emoji}`;
 }
 
 const VALUE_ADJUSTMNET = 2;
@@ -68,14 +77,36 @@ export function create(suit: Suit, rank: number): Card {
   };
 }
 
+const DECK_SUITS = [
+  SUITS.Clubs,
+  SUITS.Diamonds,
+  SUITS.Clubs,
+  SUITS.Diamonds,
+  SUITS.Hearts,
+  SUITS.Spades,
+];
+
 export function createDeck(): Card[] {
   const deck: Card[] = [];
 
-  for (const suit of R10_SUITS) {
+  for (const suit of DECK_SUITS) {
     for (let rank = 1; rank <= VALUE_MAX; rank++) {
       deck.push(create(suit, rank));
     }
   }
 
   return shuffleArray(deck);
+}
+
+export function convertAbbrevToCard(abbrev: string): Card {
+  const [rankStr, suitA] = abbrev.split("");
+
+  const suit = SUITS_ABBREVIATED[suitA as keyof typeof SUITS_ABBREVIATED];
+  if (!suit) throw new Error(`Could not find suit ${suitA}`);
+
+  const rank =
+    FACES_TO_RANK[rankStr.toUpperCase() as keyof typeof FACES_TO_RANK] ||
+    Number(rankStr);
+
+  return create(suit, Number(rank));
 }

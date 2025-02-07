@@ -40,13 +40,7 @@ export function get(play: card.Card[]): Play {
 }
 
 function allCardSameValue(cards: card.Card[]): boolean {
-  let first = cards[0].value;
-
-  for (let i = 1; i < cards.length; i++) {
-    if (cards[i].value !== first) return false;
-  }
-
-  return true;
+  return new Set(cards.map((c) => c.value)).size === 1;
 }
 
 function allInARow(cards: card.Card[]): boolean {
