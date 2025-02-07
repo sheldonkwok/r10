@@ -1,10 +1,5 @@
 import * as card from "./card";
 
-interface Play {
-  name: string;
-  value: number;
-}
-
 export const PLAYS = {
   single: { name: "Single", value: 0 },
   pair: { name: "Pair", value: 0 },
@@ -15,17 +10,19 @@ export const PLAYS = {
   bomb6: { name: "Six Card Bomb", value: 4 },
 
   illegal: { name: "Illegal", value: -1 },
-};
+} as const;
 
-type PlayName = keyof typeof PLAYS;
+type PlayType = typeof PLAYS;
+type PlayName = keyof PlayType;
+export type Play = PlayType[PlayName];
 
-export function get(play: card.Card[]): Play {
-  const len = play.length;
+export function get(cards: card.Card[]): Play {
+  const len = cards.length;
 
   // Single
   if (len === 1) return PLAYS.single;
 
-  const sameValue = allCardSameValue(play);
+  const sameValue = allCardSameValue(cards);
 
   // Pair
   if (len === 2 && sameValue) return PLAYS.pair;
@@ -34,7 +31,7 @@ export function get(play: card.Card[]): Play {
   if (len >= 3 && len <= 6 && sameValue) return PLAYS[`bomb${len}` as PlayName];
 
   // Straight
-  if (len >= 3 && allInARow(play)) return PLAYS.straight;
+  if (len >= 3 && allInARow(cards)) return PLAYS.straight;
 
   return PLAYS.illegal;
 }

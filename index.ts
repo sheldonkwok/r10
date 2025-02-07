@@ -1,6 +1,7 @@
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
+import * as play from "./play.ts";
 import * as card from "./card.ts";
 
 function createHands(): card.Card[][] {
@@ -25,9 +26,14 @@ hands.forEach((hand, i) => {
 });
 
 async function playGame(hands: card.Card[][]) {
-  const rl = readline.createInterface({ input, output });
   let currentPlayer = 0;
   const playedCards: card.Card[] = [];
+  const numPlayers = hands.length;
+
+  let currBestPlay: play.Play | undefined;
+  let currBestPlayer: number = currentPlayer;
+
+  const rl = readline.createInterface({ input, output });
 
   while (hands.some((hand) => hand.length > 0)) {
     console.log(`\nPlayer ${currentPlayer + 1}'s turn`);
@@ -37,11 +43,31 @@ async function playGame(hands: card.Card[][]) {
     );
 
     const answer = await rl.question("Choose cards to play: ");
+    if (answer === "p") {
+      currentPlayer = (currentPlayer + 1) % numPlayers;
+      continue;
+    }
+
     const selected = answer.split(" ");
+    console.log(selected);
+    const toPlay = selected.map(card.convertAbbrevToCard);
+    const currPlay = play.get(toPlay);
 
-    console.log(selected.map(card.convertAbbrevToCard));
+    if (currPlay.name === "Illegal") {
+      console.warn("Illegal play");
+      continue;
+    }
 
-    currentPlayer = (currentPlayer + 1) % 6;
+    if (!currBestPlay) {
+      currBestPlay = currPlay;
+      currBestPlayer = currentPlayer;
+    } else if (currBestPlay !== currPlay) {
+      console.log("Must play similar to current best");
+      continue;
+    }
+
+    console.log(toPlay, currBestPlay);
+    currentPlayer = (currentPlayer + 1) % numPlayers;
   }
 
   console.log("\nGame Over!");

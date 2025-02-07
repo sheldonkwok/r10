@@ -99,7 +99,8 @@ export function createDeck(): Card[] {
 }
 
 export function convertAbbrevToCard(abbrev: string): Card {
-  const [rankStr, suitA] = abbrev.split("");
+  const rankStr = abbrev.slice(0, -1);
+  const suitA = abbrev.slice(-1);
 
   const suit = SUITS_ABBREVIATED[suitA as keyof typeof SUITS_ABBREVIATED];
   if (!suit) throw new Error(`Could not find suit ${suitA}`);
