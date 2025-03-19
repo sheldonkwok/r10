@@ -1,8 +1,9 @@
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import * as play from "./play.ts";
-import * as card from "./card.ts";
+import * as play from "./play";
+import * as card from "./card";
+import compare from "./compare";
 
 function createHands(): card.Card[][] {
   const deck = card.createDeck();
@@ -61,9 +62,14 @@ async function playGame(hands: card.Card[][]) {
     if (!currBestPlay) {
       currBestPlay = currPlay;
       currBestPlayer = currentPlayer;
-    } else if (currBestPlay !== currPlay) {
-      console.log("Must play similar to current best");
-      continue;
+    } else {
+      const result = compare(currBestPlay, currPlay);
+      if (result.error) {
+        console.warn(result.error);
+        continue;
+      }
+
+      currBestPlay = currPlay;
     }
 
     console.log(toPlay, currBestPlay);

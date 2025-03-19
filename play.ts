@@ -1,37 +1,43 @@
 import * as card from "./card";
 
 export const PLAYS = {
-  single: { name: "Single", value: 0 },
-  pair: { name: "Pair", value: 0 },
-  straight: { name: "Straight", value: 0 },
-  bomb3: { name: "Three Card Bomb", value: 1 },
-  bomb4: { name: "Four Card Bomb", value: 2 },
-  bomb5: { name: "Five Card Bomb", value: 3 },
-  bomb6: { name: "Six Card Bomb", value: 4 },
+  single: { name: "Single", rank: 0 },
+  pair: { name: "Pair", rank: 0 },
+  straight: { name: "Straight", rank: 0 },
+  bomb3: { name: "Three Card Bomb", rank: 1 },
+  bomb4: { name: "Four Card Bomb", rank: 2 },
+  bomb5: { name: "Five Card Bomb", rank: 3 },
+  bomb6: { name: "Six Card Bomb", rank: 4 },
 
-  illegal: { name: "Illegal", value: -1 },
+  illegal: { name: "Illegal", rank: -1, value: -1 },
 } as const;
 
 type PlayType = typeof PLAYS;
 type PlayName = keyof PlayType;
-export type Play = PlayType[PlayName];
+type BasePlay = PlayType[PlayName];
+export type Play = BasePlay & { value: number };
 
 export function get(cards: card.Card[]): Play {
   const len = cards.length;
+  const firstValue = cards[0]?.value;
 
   // Single
-  if (len === 1) return PLAYS.single;
+  if (len === 1) return { ...PLAYS.single, value: firstValue };
 
   const sameValue = allCardSameValue(cards);
 
   // Pair
-  if (len === 2 && sameValue) return PLAYS.pair;
+  if (len === 2 && sameValue) return { ...PLAYS.pair, value: firstValue };
 
   // Bombs
-  if (len >= 3 && len <= 6 && sameValue) return PLAYS[`bomb${len}` as PlayName];
+  if (isBombCount(len) && sameValue) {
+    return { ...PLAYS[`bomb${len}`], value: firstValue };
+  }
 
   // Straight
-  if (len >= 3 && allInARow(cards)) return PLAYS.straight;
+  if (len >= 3 && allInARow(cards)) {
+    return { ...PLAYS.straight, value: cards[cards.length - 1].value };
+  }
 
   return PLAYS.illegal;
 }
@@ -60,4 +66,15 @@ function allInARow(cards: card.Card[]): boolean {
   }
 
   return true;
+}
+
+type BombCount = Extract<
+  PlayName,
+  `bomb${number}`
+> extends `bomb${infer N extends number}`
+  ? N
+  : never;
+
+function isBombCount(num: number): num is BombCount {
+  return num >= 3 && num <= 6;
 }
