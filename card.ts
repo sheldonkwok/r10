@@ -111,3 +111,47 @@ export function convertAbbrevToCard(abbrev: string): Card {
 
   return create(suit, Number(rank));
 }
+
+export type Cards = Card[];
+
+export function createHands(): Cards[] {
+  const deck = createDeck();
+
+  const players = Array.from({ length: 6 }, () => [] as Card[]);
+  for (let i = 0; i < deck.length; i++) {
+    players[i % 6].push(deck[i]);
+  }
+
+  for (const playerDeck of players) {
+    playerDeck.sort((a, b) => b.value - a.value);
+  }
+
+  return players;
+}
+
+// Cards should be small so we can just iterate
+
+export function handHasPlay(hand: Cards, play: Cards): boolean {
+  const marked = new Set<number>();
+
+  for (const pCard of play) {
+    for (const [i, hCard] of hand.entries()) {
+      if (marked.has(i)) continue;
+      if (pCard.display === hCard.display) marked.add(i);
+    }
+  }
+
+  return marked.size === play.length;
+}
+
+// Does assume valid toRemove
+export function removeHandCards(hand: Cards, toRemove: Cards): void {
+  for (const rCard of toRemove) {
+    const idx = hand.findIndex((hCard) => hCard.display === rCard.display);
+    if (idx !== -1) hand.splice(idx, 1);
+  }
+}
+
+export function cardsToStr(cards: Cards): string {
+  return cards.map((card) => card.display).join(" ");
+}
