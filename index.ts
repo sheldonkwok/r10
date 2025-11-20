@@ -1,22 +1,43 @@
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import * as handLib from "./hand";
 import * as play from "./play";
 import * as card from "./card";
 import compare from "./compare";
 
+type Team = "red" | "black";
+class Player {
+  name: string;
+  hand: card.Cards;
+  team: Team;
+
+  constructor(name: string, hand: card.Cards) {
+    this.name = name;
+    this.hand = hand;
+    this.team = "black";
+
+    for (const c of hand) {
+      const isRed =
+        c.suit === card.SUITS.Diamonds || c.suit === card.SUITS.Hearts;
+
+      if (c.rank === 10 && isRed) {
+        this.team = "red";
+      }
+    }
+  }
+}
+
 const hands = card.createHands();
+const players = hands.map((hand, i) => new Player(`p${i}`, hand));
 
 console.log("Players' hands:");
-hands.forEach((hand, i) => {
-  console.log(`Player ${i}: ${card.cardsToStr(hand)}`);
+players.forEach((p, i) => {
+  console.log(`${p.name}: ${card.cardsToStr(p.hand)}`);
 });
 
 async function playGame(hands: card.Card[][]) {
   let currentPlayer = 0;
-  const playedCards: card.Card[] = [];
-  const numPlayers = hands.length;
+  const numPlayers = players.length;
 
   let currBestPlay: play.Play | undefined;
   let currBestPlayer: number = currentPlayer;
@@ -24,13 +45,13 @@ async function playGame(hands: card.Card[][]) {
   const rl = readline.createInterface({ input, output });
 
   // TODO correct game end
-  while (hands.some((hand) => hand.length > 0)) {
+  while (continueGame(players)) {
     if (currBestPlayer === currentPlayer && currBestPlay) {
       currBestPlay = undefined;
       console.log("New round");
     }
 
-    const hand = hands[currentPlayer];
+    const hand = players[currentPlayer].hand;
     if (hand.length === 0) continue;
 
     console.log(
@@ -85,3 +106,18 @@ async function playGame(hands: card.Card[][]) {
 }
 
 await playGame(hands);
+
+function continueGame(players: Player[]): boolean {
+  let red = 0;
+  let black = 0;
+
+  for (const player of players) {
+    if (player.team === "black") {
+      black++;
+    } else {
+      red++;
+    }
+  }
+
+  return red !== 0 && black !== 0;
+}

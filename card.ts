@@ -21,10 +21,10 @@ type Suit = (typeof SUITS)[keyof typeof SUITS];
 
 export interface Card {
   suit: Suit;
-  rank: number;
+  rank: number; // Number/Face
 
   display: string;
-  value: number;
+  value: number; // For scoring
 }
 
 const FACES = {
