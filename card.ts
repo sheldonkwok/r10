@@ -27,25 +27,31 @@ export interface Card {
   value: number; // For scoring
 }
 
-const FACES = {
-  "1": "A",
-  "11": "J",
-  "12": "Q",
-  "13": "K",
-} as const;
-
-const FACES_TO_RANK = {
-  [FACES[1]]: 1,
-  [FACES[11]]: 11,
-  [FACES[12]]: 12,
-  [FACES[13]]: 13,
+export const CARD_RANKS = {
+  A: 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
+  "9": 9,
+  "10": 10,
+  J: 11,
+  Q: 12,
+  K: 13,
 };
 
+const RANK_TO_FACE = {
+  [CARD_RANKS["A"]]: "A",
+  [CARD_RANKS["J"]]: "J",
+  [CARD_RANKS["Q"]]: "Q",
+  [CARD_RANKS["K"]]: "K",
+} as const;
+
 function cardDisplay(suit: Suit, rank: number): string {
-  const display =
-    rank > 1 && rank <= 10
-      ? rank
-      : FACES[rank.toString() as keyof typeof FACES];
+  const display = rank > 1 && rank <= 10 ? rank : RANK_TO_FACE[rank];
 
   return `${display}${suit.emoji}`;
 }
@@ -105,19 +111,18 @@ export function convertAbbrevToCard(abbrev: string): Card {
   const suit = SUITS_ABBREVIATED[suitA as keyof typeof SUITS_ABBREVIATED];
   if (!suit) throw new Error(`Could not find suit ${suitA}`);
 
-  const rank =
-    FACES_TO_RANK[rankStr.toUpperCase() as keyof typeof FACES_TO_RANK] ||
-    Number(rankStr);
+  const rank = CARD_RANKS[rankStr.toUpperCase() as keyof typeof CARD_RANKS];
 
-  return create(suit, Number(rank));
+  return create(suit, rank);
 }
 
 export type Cards = Card[];
 
+export const NUM_PLAYERS = 6;
 export function createHands(): Cards[] {
   const deck = createDeck();
 
-  const players = Array.from({ length: 6 }, () => [] as Card[]);
+  const players = Array.from({ length: NUM_PLAYERS }, () => [] as Card[]);
   for (let i = 0; i < deck.length; i++) {
     players[i % 6].push(deck[i]);
   }

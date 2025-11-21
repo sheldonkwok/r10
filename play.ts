@@ -35,7 +35,7 @@ export function get(cards: card.Card[]): Play {
   }
 
   // Straight
-  if (len >= 3 && allInARow(cards)) {
+  if (isStraight(cards)) {
     return { ...PLAYS.straight, value: cards[cards.length - 1].value };
   }
 
@@ -46,21 +46,27 @@ function allCardSameValue(cards: card.Card[]): boolean {
   return new Set(cards.map((c) => c.value)).size === 1;
 }
 
-function allInARow(cards: card.Card[]): boolean {
-  const sorted = cards.slice().sort((a, b) => a.rank - b.rank);
-  const len = sorted.length;
+function isStraight(cards: card.Card[]): boolean {
+  const len = cards.length;
+  if (len < 3) return false;
 
-  while (sorted[len - 1].value === sorted[0].value - 1) {
-    const temp = sorted.pop()!;
-    sorted.splice(0, 0, temp);
+  const sorted = cards.slice().sort((a, b) => a.rank - b.rank);
+
+  const isAWrap =
+    sorted[len - 1].rank === card.CARD_RANKS.K &&
+    sorted[0].rank === card.CARD_RANKS.A;
+
+  if (isAWrap) {
+    const temp = sorted.shift()!;
+    sorted.push(temp);
   }
 
-  for (let i = 1; i < sorted.length; i++) {
+  for (let i = 1; i < len; i++) {
     const curr = sorted[i];
     const prev = sorted[i - 1];
 
     if (Math.abs(curr.rank - prev.rank) === 1) continue;
-    if (Math.abs(curr.value - prev.value) === 1) continue;
+    if (isAWrap && Math.abs(curr.value - prev.value) === 1) continue;
 
     return false;
   }

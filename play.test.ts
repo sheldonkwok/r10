@@ -4,6 +4,7 @@ import * as card from "./card";
 import * as play from "./play";
 
 const PLAYS = play.PLAYS;
+const RANKS = card.CARD_RANKS;
 
 describe("single", () => {
   test("valid", () => {
@@ -54,13 +55,17 @@ describe("straight", () => {
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 2 });
   });
 
-  test("valid wrap ace", () => {
-    const fix = [1, 2, 3].map((num) => card.create(card.SUITS.Clubs, num));
+  test("valid ace low", () => {
+    const fix = [RANKS.A, 2, 3].map((num) =>
+      card.create(card.SUITS.Clubs, num)
+    );
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 1 });
   });
 
-  test("valid wrap king", () => {
-    const fix = [13, 2, 1].map((num) => card.create(card.SUITS.Clubs, num));
+  test("valid ace high", () => {
+    const fix = [RANKS.K, RANKS.Q, RANKS.A].map((num) =>
+      card.create(card.SUITS.Clubs, num)
+    );
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 12 });
   });
 
@@ -72,11 +77,11 @@ describe("straight", () => {
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 5 });
   });
 
-  test("valid long wrap king", () => {
-    const fix = [1, 2, 13, 11, 12, 3].map((num) =>
+  test("invalid wrap ace", () => {
+    const fix = [RANKS.K, RANKS.A, 2].map((num) =>
       card.create(card.SUITS.Clubs, num)
     );
 
-    expect(play.get(fix)).toMatchObject(PLAYS.straight);
+    expect(play.get(fix)).toMatchObject(PLAYS.illegal);
   });
 });
