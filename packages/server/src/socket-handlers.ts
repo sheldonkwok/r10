@@ -12,11 +12,9 @@ interface SocketMeta {
 }
 
 function sendGameStateToPlayers(io: IOServer, roomId: string, game: ReturnType<typeof createGame>) {
+  const state = game.getState();
   for (const socketId of game.getSocketIds()) {
-    const player = game.getPlayerBySocketId(socketId);
-    if (player) {
-      io.to(socketId).emit("game:state", game.getStateForPlayer(player.info.id));
-    }
+    io.to(socketId).emit("game:state", state);
   }
 }
 

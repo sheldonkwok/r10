@@ -6,33 +6,29 @@ interface GameProps {
 }
 
 export function Game({ state, currentUserId }: GameProps) {
-  const currentPlayer = state.players.find((p) => p.id === currentUserId);
-
   return (
     <div className="game">
       <h1>Red 10</h1>
-      <div className="players-bar">
+      <div className="players-list">
         {state.players.map((player) => (
           <div
             key={player.id}
-            className={`player-info ${player.id === currentUserId ? "current" : ""}`}
+            className={`player-row ${player.id === currentUserId ? "current" : ""}`}
           >
-            <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
-            <span>{player.username}</span>
-            <span className="card-count">{player.cardCount} cards</span>
-            {player.isBot && <span className="bot-badge">Bot</span>}
+            <div className="player-info">
+              <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
+              <span className="player-name">{player.username}</span>
+              {player.isBot && <span className="bot-badge">Bot</span>}
+            </div>
+            <div className="player-hand">
+              {player.hand.map((card, i) => (
+                <span key={i} className="card">
+                  {card.display}
+                </span>
+              ))}
+            </div>
           </div>
         ))}
-      </div>
-      <div className="hand">
-        <h2>Your Hand ({state.hand.length} cards)</h2>
-        <div className="cards">
-          {state.hand.map((card, i) => (
-            <div key={i} className="card">
-              {card.display}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

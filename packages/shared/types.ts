@@ -18,13 +18,12 @@ export interface GamePlayer {
   username: string;
   avatarUrl: string;
   isBot: boolean;
-  cardCount: number;
+  hand: import("./card.ts").Card[];
 }
 
 export interface GameState {
   roomId: string;
   players: GamePlayer[];
-  hand: import("./card.ts").Card[];
 }
 
 export interface ClientToServerEvents {
