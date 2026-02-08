@@ -4,6 +4,7 @@ export interface LobbyPlayer {
   avatarUrl: string;
   ready: boolean;
   isHost: boolean;
+  isBot: boolean;
 }
 
 export interface LobbyState {

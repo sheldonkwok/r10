@@ -11,7 +11,8 @@ interface LobbyProps {
 export function Lobby({ state, currentUserId, onToggleReady, onStart }: LobbyProps) {
   const currentPlayer = state.players.find((p) => p.id === currentUserId);
   const isHost = currentPlayer?.isHost ?? false;
-  const allReady = state.players.length === state.maxPlayers && state.players.every((p) => p.ready);
+  const humanPlayers = state.players.filter((p) => !p.isBot);
+  const allReady = humanPlayers.length > 0 && humanPlayers.every((p) => p.ready);
 
   const slots = Array.from({ length: state.maxPlayers }, (_, i) => state.players[i] ?? null);
 

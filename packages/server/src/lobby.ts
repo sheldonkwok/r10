@@ -15,7 +15,7 @@ export class Lobby {
     if (this.hasDiscordUser(id)) return false;
 
     const isHost = this.players.size === 0;
-    this.players.set(socketId, { id, username, avatarUrl, ready: false, isHost });
+    this.players.set(socketId, { id, username, avatarUrl, ready: false, isHost, isBot: false });
     return true;
   }
 
@@ -44,8 +44,24 @@ export class Lobby {
   }
 
   canStart(): boolean {
-    if (this.players.size !== MAX_PLAYERS) return false;
-    return [...this.players.values()].every((p) => p.ready);
+    if (this.players.size === 0) return false;
+    return [...this.players.values()].filter((p) => !p.isBot).every((p) => p.ready);
+  }
+
+  fillWithBots(): void {
+    let botNum = 1;
+    while (this.players.size < MAX_PLAYERS) {
+      const botId = `bot-${Date.now()}-${botNum}`;
+      this.players.set(botId, {
+        id: botId,
+        username: `Bot ${botNum}`,
+        avatarUrl: `https://cdn.discordapp.com/embed/avatars/${botNum % 5}.png`,
+        ready: true,
+        isHost: false,
+        isBot: true,
+      });
+      botNum++;
+    }
   }
 
   isEmpty(): boolean {

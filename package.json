@@ -6,6 +6,7 @@
   "scripts": {
     "dev:server": "bun run --filter server dev",
     "dev:client": "bun run --filter client dev",
+    "dev": "pnpm run /^dev:.*/",
     "test": "bun test --filter shared"
   },
   "devDependencies": {

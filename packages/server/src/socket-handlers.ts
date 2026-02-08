@@ -57,10 +57,12 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
       return;
     }
     if (!lobby.canStart()) {
-      socket.emit("lobby:error", "All 6 players must be ready to start");
+      socket.emit("lobby:error", "All players must be ready to start");
       return;
     }
 
+    lobby.fillWithBots();
+    broadcastState(io, meta.roomId);
     io.to(meta.roomId).emit("lobby:started");
   });
 
