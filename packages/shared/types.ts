@@ -13,6 +13,20 @@ export interface LobbyState {
   maxPlayers: number;
 }
 
+export interface GamePlayer {
+  id: string;
+  username: string;
+  avatarUrl: string;
+  isBot: boolean;
+  cardCount: number;
+}
+
+export interface GameState {
+  roomId: string;
+  players: GamePlayer[];
+  hand: import("./card.ts").Card[];
+}
+
 export interface ClientToServerEvents {
   "lobby:join": (data: { roomId: string; token: string }) => void;
   "lobby:ready": () => void;
@@ -23,5 +37,5 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   "lobby:state": (state: LobbyState) => void;
   "lobby:error": (message: string) => void;
-  "lobby:started": () => void;
+  "game:state": (state: GameState) => void;
 }

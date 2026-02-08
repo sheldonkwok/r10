@@ -76,6 +76,10 @@ export class Lobby {
     };
   }
 
+  getPlayerEntries(): [string, LobbyPlayer][] {
+    return [...this.players.entries()];
+  }
+
   private hasDiscordUser(id: string): boolean {
     return [...this.players.values()].some((p) => p.id === id);
   }

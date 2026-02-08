@@ -2,12 +2,22 @@ import type { Server, Socket } from "socket.io";
 import type { ClientToServerEvents, ServerToClientEvents } from "shared";
 import { getDiscordUser, avatarUrl } from "./auth.ts";
 import { getOrCreateLobby, removeLobbyIfEmpty } from "./lobby.ts";
+import { createGame } from "./game.ts";
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
 interface SocketMeta {
   roomId: string;
+}
+
+function sendGameStateToPlayers(io: IOServer, roomId: string, game: ReturnType<typeof createGame>) {
+  for (const socketId of game.getSocketIds()) {
+    const player = game.getPlayerBySocketId(socketId);
+    if (player) {
+      io.to(socketId).emit("game:state", game.getStateForPlayer(player.info.id));
+    }
+  }
 }
 
 const socketRooms = new Map<string, SocketMeta>();
@@ -62,8 +72,8 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     }
 
     lobby.fillWithBots();
-    broadcastState(io, meta.roomId);
-    io.to(meta.roomId).emit("lobby:started");
+    const game = createGame(meta.roomId, lobby.getPlayerEntries());
+    sendGameStateToPlayers(io, meta.roomId, game);
   });
 
   socket.on("lobby:leave", () => {

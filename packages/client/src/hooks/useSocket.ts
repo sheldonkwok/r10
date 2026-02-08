@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { io, Socket } from "socket.io-client";
-import type { LobbyState, ClientToServerEvents, ServerToClientEvents } from "shared";
+import type { LobbyState, GameState, ClientToServerEvents, ServerToClientEvents } from "shared";
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 interface UseSocketResult {
   lobbyState: LobbyState | null;
+  gameState: GameState | null;
   toggleReady: () => void;
   startGame: () => void;
   error: string | null;
@@ -13,6 +14,7 @@ interface UseSocketResult {
 
 export function useSocket(roomId: string | null, token: string | null): UseSocketResult {
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<TypedSocket | null>(null);
 
@@ -34,8 +36,9 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
       setError(message);
     });
 
-    socket.on("lobby:started", () => {
-      // TODO: transition to game
+    socket.on("game:state", (state) => {
+      setLobbyState(null);
+      setGameState(state);
     });
 
     return () => {
@@ -52,5 +55,5 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
     socketRef.current?.emit("lobby:start");
   }, []);
 
-  return { lobbyState, toggleReady, startGame, error };
+  return { lobbyState, gameState, toggleReady, startGame, error };
 }
