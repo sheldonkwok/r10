@@ -1,11 +1,15 @@
 {
   "name": "r10",
-  "module": "index.ts",
+  "private": true,
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev:server": "bun run --filter server dev",
+    "dev:client": "bun run --filter client dev",
+    "test": "bun test --filter shared"
   },
-  "peerDependencies": {
+  "devDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5.0.0"
   }
 }
