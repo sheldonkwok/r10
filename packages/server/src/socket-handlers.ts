@@ -18,12 +18,17 @@ function sendGameStateToPlayers(io: IOServer, roomId: string, game: Game) {
   }
 }
 
-function processBotTurns(io: IOServer, roomId: string, game: Game) {
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function processBotTurns(io: IOServer, roomId: string, game: Game) {
   let safety = 0;
   const maxIterations = 100;
 
   while (game.isCurrentPlayerBot() && safety < maxIterations) {
     safety++;
+    await sleep(1000);
     try {
       game.makeBotPlay();
       sendGameStateToPlayers(io, roomId, game);
