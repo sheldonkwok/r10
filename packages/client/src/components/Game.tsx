@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { play, type GameState } from "shared";
+import { play, compare, type GameState } from "shared";
 
 interface GameProps {
   state: GameState;
@@ -47,7 +47,18 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
     return play.get(selectedCards);
   }, [selectedCards]);
 
-  const isValidPlay = selectedPlay !== null && selectedPlay.name !== "Illegal";
+  const isValidPlay = useMemo(() => {
+    if (!selectedPlay || selectedPlay.name === "Illegal") return false;
+
+    // If there's a current play to beat and it's not our own play
+    if (state.currentPlay && state.lastPlayerId !== currentUserId) {
+      const currentPlayObj = play.get(state.currentPlay.cards);
+      const result = compare(currentPlayObj, selectedPlay);
+      return result.valid;
+    }
+
+    return true;
+  }, [selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
 
   const canPass = state.currentPlay !== null && state.lastPlayerId !== currentUserId;
 
