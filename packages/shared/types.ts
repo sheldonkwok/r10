@@ -21,9 +21,18 @@ export interface GamePlayer {
   hand: import("./card.ts").Card[];
 }
 
+export interface CurrentPlay {
+  playerId: string;
+  cards: import("./card.ts").Card[];
+  playType: string;
+}
+
 export interface GameState {
   roomId: string;
   players: GamePlayer[];
+  currentTurn: number;
+  currentPlay: CurrentPlay | null;
+  lastPlayerId: string | null;
 }
 
 export interface ClientToServerEvents {
@@ -31,6 +40,8 @@ export interface ClientToServerEvents {
   "lobby:ready": () => void;
   "lobby:start": () => void;
   "lobby:leave": () => void;
+  "game:play": (data: { cardIndices: number[] }) => void;
+  "game:pass": () => void;
 }
 
 export interface ServerToClientEvents {

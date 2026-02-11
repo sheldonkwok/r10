@@ -2,7 +2,7 @@ import type { Server, Socket } from "socket.io";
 import type { ClientToServerEvents, ServerToClientEvents } from "shared";
 import { getDiscordUser, avatarUrl } from "./auth.ts";
 import { getOrCreateLobby, removeLobbyIfEmpty } from "./lobby.ts";
-import { createGame } from "./game.ts";
+import { createGame, getGame, type Game } from "./game.ts";
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
@@ -11,10 +11,26 @@ interface SocketMeta {
   roomId: string;
 }
 
-function sendGameStateToPlayers(io: IOServer, roomId: string, game: ReturnType<typeof createGame>) {
+function sendGameStateToPlayers(io: IOServer, roomId: string, game: Game) {
   const state = game.getState();
   for (const socketId of game.getSocketIds()) {
     io.to(socketId).emit("game:state", state);
+  }
+}
+
+function processBotTurns(io: IOServer, roomId: string, game: Game) {
+  let safety = 0;
+  const maxIterations = 100;
+
+  while (game.isCurrentPlayerBot() && safety < maxIterations) {
+    safety++;
+    try {
+      game.makeBotPlay();
+      sendGameStateToPlayers(io, roomId, game);
+    } catch (err) {
+      console.error("Bot play error:", err);
+      break;
+    }
   }
 }
 
@@ -72,6 +88,51 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     lobby.fillWithBots();
     const game = createGame(meta.roomId, lobby.getPlayerEntries());
     sendGameStateToPlayers(io, meta.roomId, game);
+    processBotTurns(io, meta.roomId, game);
+  });
+
+  socket.on("game:play", ({ cardIndices }) => {
+    const meta = socketRooms.get(socket.id);
+    if (!meta) return;
+
+    const game = getGame(meta.roomId);
+    if (!game) return;
+
+    if (!game.isPlayerTurn(socket.id)) {
+      socket.emit("lobby:error", "Not your turn");
+      return;
+    }
+
+    const result = game.makePlay(cardIndices);
+    if (!result.success) {
+      socket.emit("lobby:error", result.error ?? "Invalid play");
+      return;
+    }
+
+    sendGameStateToPlayers(io, meta.roomId, game);
+    processBotTurns(io, meta.roomId, game);
+  });
+
+  socket.on("game:pass", () => {
+    const meta = socketRooms.get(socket.id);
+    if (!meta) return;
+
+    const game = getGame(meta.roomId);
+    if (!game) return;
+
+    if (!game.isPlayerTurn(socket.id)) {
+      socket.emit("lobby:error", "Not your turn");
+      return;
+    }
+
+    const result = game.pass();
+    if (!result.success) {
+      socket.emit("lobby:error", result.error ?? "Cannot pass");
+      return;
+    }
+
+    sendGameStateToPlayers(io, meta.roomId, game);
+    processBotTurns(io, meta.roomId, game);
   });
 
   socket.on("lobby:leave", () => {

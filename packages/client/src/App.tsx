@@ -7,7 +7,7 @@ export function App() {
   const { sdk, auth, error: sdkError } = useDiscordSdk();
   const roomId = sdk?.channelId ?? null;
   const token = auth?.accessToken ?? null;
-  const { lobbyState, gameState, toggleReady, startGame, error: socketError } = useSocket(roomId, token);
+  const { lobbyState, gameState, toggleReady, startGame, playCards, pass, error: socketError } = useSocket(roomId, token);
 
   const error = sdkError ?? socketError;
 
@@ -20,7 +20,14 @@ export function App() {
   }
 
   if (gameState) {
-    return <Game state={gameState} currentUserId={auth.user.id} />;
+    return (
+      <Game
+        state={gameState}
+        currentUserId={auth.user.id}
+        onPlayCards={playCards}
+        onPass={pass}
+      />
+    );
   }
 
   if (!lobbyState) {
