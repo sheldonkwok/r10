@@ -3,9 +3,8 @@
   "private": true,
   "type": "module",
 "scripts": {
-    "dev:server": "bun run --filter server dev",
-    "dev:client": "bun run --filter client dev",
-    "dev": "pnpm run /^dev:.*/",
+    "dev": "pnpm --filter server dev",
+    "build": "pnpm --filter client build",
     "test": "bun test --filter shared"
   },
   "devDependencies": {
