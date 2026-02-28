@@ -239,8 +239,6 @@ export class Game {
   }
 }
 
-export type { Game };
-
 const games = new Map<string, Game>();
 
 export function createGame(roomId: string, lobbyPlayers: [string, LobbyPlayer][]): Game {

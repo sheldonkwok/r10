@@ -77,7 +77,12 @@ export function useDiscordSdk(): UseDiscordSdkResult {
         setSdk(discordSdk);
         setAuth({
           accessToken: access_token,
-          user: authResult.user,
+          user: {
+            id: authResult.user.id,
+            username: authResult.user.username,
+            avatar: authResult.user.avatar ?? null,
+            global_name: authResult.user.global_name ?? null,
+          },
         });
       } catch (err) {
         if (cancelled) return;

@@ -5,7 +5,8 @@
 "scripts": {
     "dev": "pnpm --filter server dev",
     "build": "pnpm --filter client build",
-    "test": "pnpm --filter shared test"
+    "test": "pnpm --filter shared test",
+    "check": "pnpm -r exec tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { play, compare, type GameState } from "shared";
 import { Card } from "./Card.tsx";
+import { Button } from "@/components/ui/button";
 
 interface GameProps {
   state: GameState;
@@ -138,15 +139,15 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
               </span>
             )}
           </div>
-          <button onClick={handlePlay} disabled={!isValidPlay}>
+          <Button onClick={handlePlay} disabled={!isValidPlay}>
             Play {selectedPlay?.name ?? ""}
-          </button>
-          <button onClick={onPass} disabled={!canPass}>
+          </Button>
+          <Button onClick={onPass} disabled={!canPass}>
             Pass
-          </button>
-          <button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
+          </Button>
+          <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
             Clear
-          </button>
+          </Button>
         </div>
       )}
     </div>

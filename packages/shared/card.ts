@@ -55,7 +55,7 @@ export function rankDisplay(rank: number): string {
 }
 
 function cardDisplay(suit: Suit, rank: number): string {
-  const display = rankDisplay(number);
+  const display = rankDisplay(rank);
 
   return `${display}${suit.emoji}`;
 }
