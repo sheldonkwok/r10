@@ -1,6 +1,6 @@
 import type { LobbyState } from "shared";
-import { PlayerSlot } from "./PlayerSlot.tsx";
 import { Button } from "@/components/ui/button";
+import { PlayerSlot } from "./PlayerSlot.tsx";
 
 interface LobbyProps {
   state: LobbyState;
@@ -25,13 +25,11 @@ export function Lobby({ state, currentUserId, onToggleReady, onStart }: LobbyPro
       </p>
       <div className="player-grid">
         {slots.map((player, i) => (
-          <PlayerSlot key={i} player={player} />
+          <PlayerSlot key={player?.id ?? `slot-${i}`} player={player} />
         ))}
       </div>
       <div className="lobby-actions">
-        <Button onClick={onToggleReady}>
-          {currentPlayer?.ready ? "Unready" : "Ready"}
-        </Button>
+        <Button onClick={onToggleReady}>{currentPlayer?.ready ? "Unready" : "Ready"}</Button>
         {isHost && (
           <Button onClick={onStart} disabled={!allReady}>
             Start Game

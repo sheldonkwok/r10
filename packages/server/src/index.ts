@@ -1,10 +1,10 @@
-import express from "express";
 import { createServer } from "node:http";
-import { Server } from "socket.io";
-import cors from "cors";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import cors from "cors";
+import express from "express";
 import type { ClientToServerEvents, ServerToClientEvents } from "shared";
+import { Server } from "socket.io";
 import { exchangeToken } from "./auth.ts";
 import { registerHandlers } from "./socket-handlers.ts";
 
@@ -55,7 +55,13 @@ if (process.env.NODE_ENV === "production") {
     server: {
       middlewareMode: true,
       hmr: { clientPort: 443 },
-      allowedHosts: ["localhost", "127.0.0.1", ".discord.com", ".discordsays.com", "shelarchy.wombat-dragon.ts.net"],
+      allowedHosts: [
+        "localhost",
+        "127.0.0.1",
+        ".discord.com",
+        ".discordsays.com",
+        "shelarchy.wombat-dragon.ts.net",
+      ],
     },
     appType: "spa",
   });

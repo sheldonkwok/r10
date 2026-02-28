@@ -87,14 +87,7 @@ export function create(suit: Suit, rank: number): Card {
   };
 }
 
-const DECK_SUITS = [
-  SUITS.Clubs,
-  SUITS.Diamonds,
-  SUITS.Clubs,
-  SUITS.Diamonds,
-  SUITS.Hearts,
-  SUITS.Spades,
-];
+const DECK_SUITS = [SUITS.Clubs, SUITS.Diamonds, SUITS.Clubs, SUITS.Diamonds, SUITS.Hearts, SUITS.Spades];
 
 export function createDeck(): Card[] {
   const deck: Card[] = [];

@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { card } from "shared";
 
 const cardVariants = cva(
-  "flex flex-col items-center justify-center gap-1 border-2 rounded-lg bg-white select-none w-14 h-20",
+  "flex flex-col items-center justify-center gap-1 border-2 rounded-lg bg-white select-none w-14 h-20 p-0",
   {
     variants: {
       suit: {
@@ -23,7 +23,7 @@ const cardVariants = cva(
       selectable: false,
       selected: false,
     },
-  }
+  },
 );
 
 interface CardProps extends VariantProps<typeof cardVariants> {
@@ -34,9 +34,9 @@ interface CardProps extends VariantProps<typeof cardVariants> {
 
 export function Card({ rank, suitEmoji, suit, selectable, selected, onClick }: CardProps) {
   return (
-    <div className={cardVariants({ suit, selectable, selected })} onClick={onClick}>
+    <button type="button" className={cardVariants({ suit, selectable, selected })} onClick={onClick}>
       <span className="text-lg font-bold leading-none">{card.rankDisplay(rank)}</span>
       <span className="text-xl leading-none">{suitEmoji}</span>
-    </div>
+    </button>
   );
 }

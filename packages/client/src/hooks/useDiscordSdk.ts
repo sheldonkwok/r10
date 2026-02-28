@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { DiscordSDK } from "@discord/embedded-app-sdk";
 import type { DiscordSDK as DiscordSDKType } from "@discord/embedded-app-sdk";
+import { DiscordSDK } from "@discord/embedded-app-sdk";
+import { useEffect, useState } from "react";
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID as string;
 
@@ -91,7 +91,9 @@ export function useDiscordSdk(): UseDiscordSdkResult {
     }
 
     init();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return { sdk, auth, error };

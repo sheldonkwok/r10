@@ -15,7 +15,14 @@ export class Lobby {
     if (this.hasDiscordUser(id)) return false;
 
     const isHost = this.players.size === 0;
-    this.players.set(socketId, { id, username, avatarUrl, ready: false, isHost, isBot: false });
+    this.players.set(socketId, {
+      id,
+      username,
+      avatarUrl,
+      ready: false,
+      isHost,
+      isBot: false,
+    });
     return true;
   }
 

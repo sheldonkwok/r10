@@ -56,9 +56,7 @@ function isStraight(cards: card.Card[]): boolean {
 
   const sorted = cards.slice().sort((a, b) => a.rank - b.rank);
 
-  const isAWrap =
-    sorted[len - 1].rank === card.CARD_RANKS.K &&
-    sorted[0].rank === card.CARD_RANKS.A;
+  const isAWrap = sorted[len - 1].rank === card.CARD_RANKS.K && sorted[0].rank === card.CARD_RANKS.A;
 
   if (isAWrap) {
     const temp = sorted.shift()!;
@@ -88,8 +86,7 @@ function isDragon(cards: card.Card[]): boolean {
 
   const sortedRanks = [...rankCounts.keys()].sort((a, b) => a - b);
   const isAWrap =
-    sortedRanks[sortedRanks.length - 1] === card.CARD_RANKS.K &&
-    sortedRanks[0] === card.CARD_RANKS.A;
+    sortedRanks[sortedRanks.length - 1] === card.CARD_RANKS.K && sortedRanks[0] === card.CARD_RANKS.A;
   if (isAWrap) sortedRanks.push(sortedRanks.shift()! + card.VALUE_MAX);
 
   for (let i = 1; i < sortedRanks.length; i++) {
@@ -101,17 +98,11 @@ function isDragon(cards: card.Card[]): boolean {
 function highCardValue(cards: card.Card[]): number {
   const sorted = cards.slice().sort((a, b) => a.rank - b.rank);
   const isAWrap =
-    sorted[sorted.length - 1].rank === card.CARD_RANKS.K &&
-    sorted[0].rank === card.CARD_RANKS.A;
+    sorted[sorted.length - 1].rank === card.CARD_RANKS.K && sorted[0].rank === card.CARD_RANKS.A;
   return isAWrap ? sorted[0].value : sorted[sorted.length - 1].value;
 }
 
-type BombCount = Extract<
-  PlayName,
-  `bomb${number}`
-> extends `bomb${infer N extends number}`
-  ? N
-  : never;
+type BombCount = Extract<PlayName, `bomb${number}`> extends `bomb${infer N extends number}` ? N : never;
 
 function isBombCount(num: number): num is BombCount {
   return num >= 3 && num <= 6;

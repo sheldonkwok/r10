@@ -15,13 +15,7 @@ export function PlayerSlot({ player }: PlayerSlotProps) {
 
   return (
     <div className={`player-slot ${player.ready ? "ready" : ""} ${player.isBot ? "bot" : ""}`}>
-      <img
-        src={player.avatarUrl}
-        alt={player.username}
-        className="player-avatar"
-        width={48}
-        height={48}
-      />
+      <img src={player.avatarUrl} alt={player.username} className="player-avatar" width={48} height={48} />
       <span className="player-name">{player.username}</span>
       {player.isBot && <span className="bot-badge">Bot</span>}
       {player.ready && !player.isBot && <span className="ready-badge">Ready</span>}

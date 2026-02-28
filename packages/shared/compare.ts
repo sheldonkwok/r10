@@ -1,4 +1,4 @@
-import * as play from "./play";
+import type * as play from "./play";
 
 interface Compare {
   valid: boolean;

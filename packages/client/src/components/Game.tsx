@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
-import { play, compare, type GameState } from "shared";
-import { Card } from "./Card.tsx";
+import { useEffect, useMemo, useState } from "react";
+import { compare, type GameState, play } from "shared";
 import { Button } from "@/components/ui/button";
+import { Card } from "./Card.tsx";
 
 interface GameProps {
   state: GameState;
@@ -23,6 +23,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
   const turnPlayer = state.players[state.currentTurn];
 
   // Clear selection when turn changes or after playing
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional triggers, not read inside
   useEffect(() => {
     setSelectedIndices(new Set());
   }, [state.currentTurn, state.currentPlay]);
@@ -79,18 +80,19 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
       <h1>Red 10</h1>
 
       <div className="turn-info">
-        {isMyTurn ? (
-          <strong>Your turn!</strong>
-        ) : (
-          <span>Waiting for {turnPlayer?.username}...</span>
-        )}
+        {isMyTurn ? <strong>Your turn!</strong> : <span>Waiting for {turnPlayer?.username}...</span>}
       </div>
 
       {state.currentPlay && (
         <div className="flex flex-row flex-nowrap gap-1 items-center overflow-x-auto">
           <span>Current play ({state.currentPlay.playType}): </span>
-          {state.currentPlay.cards.map((c, i) => (
-            <Card key={i} rank={c.rank} suitEmoji={c.suit.emoji} suit={suitVariant(c)} />
+          {state.currentPlay.cards.map((c) => (
+            <Card
+              key={`${c.rank}-${c.suit.short}`}
+              rank={c.rank}
+              suitEmoji={c.suit.emoji}
+              suit={suitVariant(c)}
+            />
           ))}
           <span> by {state.players.find((p) => p.id === state.currentPlay?.playerId)?.username}</span>
         </div>
@@ -113,7 +115,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
               <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
                 {player.hand.map((card, i) => (
                   <Card
-                    key={i}
+                    key={`${card.rank}-${card.suit.short}`}
                     rank={card.rank}
                     suitEmoji={card.suit.emoji}
                     suit={suitVariant(card)}

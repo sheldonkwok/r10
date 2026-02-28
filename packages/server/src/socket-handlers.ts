@@ -1,8 +1,8 @@
-import type { Server, Socket } from "socket.io";
 import type { ClientToServerEvents, ServerToClientEvents } from "shared";
-import { getDiscordUser, avatarUrl } from "./auth.ts";
+import type { Server, Socket } from "socket.io";
+import { avatarUrl, getDiscordUser } from "./auth.ts";
+import { createGame, type Game, getGame } from "./game.ts";
 import { getOrCreateLobby, removeLobbyIfEmpty } from "./lobby.ts";
-import { createGame, getGame, type Game } from "./game.ts";
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;

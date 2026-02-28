@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { io, Socket } from "socket.io-client";
-import type { LobbyState, GameState, ClientToServerEvents, ServerToClientEvents } from "shared";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ClientToServerEvents, GameState, LobbyState, ServerToClientEvents } from "shared";
+import { io, type Socket } from "socket.io-client";
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -65,5 +65,13 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
     socketRef.current?.emit("game:pass");
   }, []);
 
-  return { lobbyState, gameState, toggleReady, startGame, playCards, pass, error };
+  return {
+    lobbyState,
+    gameState,
+    toggleReady,
+    startGame,
+    playCards,
+    pass,
+    error,
+  };
 }

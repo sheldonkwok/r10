@@ -1,4 +1,12 @@
-import { card, play, compare, type GamePlayer, type GameState, type CurrentPlay, type LobbyPlayer } from "shared";
+import {
+  type CurrentPlay,
+  card,
+  compare,
+  type GamePlayer,
+  type GameState,
+  type LobbyPlayer,
+  play,
+} from "shared";
 
 interface InternalPlayer {
   info: GamePlayer;
@@ -53,9 +61,7 @@ export class Game {
   }
 
   getSocketIds(): string[] {
-    return this.players
-      .filter((p) => p.socketId !== null)
-      .map((p) => p.socketId!);
+    return this.players.filter((p) => p.socketId !== null).map((p) => p.socketId!);
   }
 
   rejoinPlayer(discordUserId: string, newSocketId: string): boolean {

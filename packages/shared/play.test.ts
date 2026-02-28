@@ -1,4 +1,4 @@
-import { expect, describe, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import * as card from "./card";
 import * as play from "./play";
@@ -32,9 +32,7 @@ describe("bomb", () => {
   });
 
   test("valid 5", () => {
-    const fix = [2, 2, 2, 2, 2].map((num) =>
-      card.create(card.SUITS.Clubs, num)
-    );
+    const fix = [2, 2, 2, 2, 2].map((num) => card.create(card.SUITS.Clubs, num));
     expect(play.get(fix)).toMatchObject(PLAYS.bomb5);
   });
 
@@ -56,31 +54,23 @@ describe("straight", () => {
   });
 
   test("valid ace low", () => {
-    const fix = [RANKS.A, 2, 3].map((num) =>
-      card.create(card.SUITS.Clubs, num)
-    );
+    const fix = [RANKS.A, 2, 3].map((num) => card.create(card.SUITS.Clubs, num));
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 1 });
   });
 
   test("valid ace high", () => {
-    const fix = [RANKS.K, RANKS.Q, RANKS.A].map((num) =>
-      card.create(card.SUITS.Clubs, num)
-    );
+    const fix = [RANKS.K, RANKS.Q, RANKS.A].map((num) => card.create(card.SUITS.Clubs, num));
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 12 });
   });
 
   test("valid long", () => {
-    const fix = [2, 3, 4, 5, 6, 7].map((num) =>
-      card.create(card.SUITS.Clubs, num)
-    );
+    const fix = [2, 3, 4, 5, 6, 7].map((num) => card.create(card.SUITS.Clubs, num));
 
     expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 5 });
   });
 
   test("invalid wrap ace", () => {
-    const fix = [RANKS.K, RANKS.A, 2].map((num) =>
-      card.create(card.SUITS.Clubs, num)
-    );
+    const fix = [RANKS.K, RANKS.A, 2].map((num) => card.create(card.SUITS.Clubs, num));
 
     expect(play.get(fix)).toMatchObject(PLAYS.illegal);
   });
@@ -88,10 +78,7 @@ describe("straight", () => {
 
 describe("dragon", () => {
   function pair(rank: number) {
-    return [
-      card.create(card.SUITS.Clubs, rank),
-      card.create(card.SUITS.Diamonds, rank),
-    ];
+    return [card.create(card.SUITS.Clubs, rank), card.create(card.SUITS.Diamonds, rank)];
   }
 
   test("valid 3-pair (3-4-5)", () => {

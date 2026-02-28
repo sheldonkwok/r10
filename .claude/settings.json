@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pnpm --filter shared test"
+            "command": "pnpm check && pnpm --filter shared test"
           }
         ]
       }
