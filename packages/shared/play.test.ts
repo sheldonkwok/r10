@@ -85,3 +85,67 @@ describe("straight", () => {
     expect(play.get(fix)).toMatchObject(PLAYS.illegal);
   });
 });
+
+describe("dragon", () => {
+  function pair(rank: number) {
+    return [
+      card.create(card.SUITS.Clubs, rank),
+      card.create(card.SUITS.Diamonds, rank),
+    ];
+  }
+
+  test("valid 3-pair (3-4-5)", () => {
+    const fix = [3, 4, 5].flatMap(pair);
+    const result = play.get(fix);
+    expect(result.name).toBe(PLAYS.dragon.name);
+    expect(result.rank).toBe(PLAYS.dragon.rank);
+    expect(result.value).toBe(3); // rank 5, value = 5 - 2 = 3
+  });
+
+  test("valid 4-pair (5-6-7-8)", () => {
+    const fix = [5, 6, 7, 8].flatMap(pair);
+    expect(play.get(fix)).toMatchObject({ ...PLAYS.dragon, value: 6 }); // rank 8, value = 6
+  });
+
+  test("valid ace-low (A-2-3)", () => {
+    const fix = [RANKS.A, 2, 3].flatMap(pair);
+    expect(play.get(fix)).toMatchObject({ ...PLAYS.dragon, value: 1 }); // rank 3, value = 1
+  });
+
+  test("valid ace-high (Q-K-A)", () => {
+    const fix = [RANKS.Q, RANKS.K, RANKS.A].flatMap(pair);
+    expect(play.get(fix)).toMatchObject({ ...PLAYS.dragon, value: 12 }); // A value = 12
+  });
+
+  test("invalid: fewer than 6 cards", () => {
+    const fix = [3, 4].flatMap(pair);
+    expect(play.get(fix)).toMatchObject(PLAYS.illegal);
+  });
+
+  test("invalid: odd card count", () => {
+    const fix = [...[3, 4, 5].flatMap(pair), card.create(card.SUITS.Clubs, 6)];
+    expect(play.get(fix)).toMatchObject(PLAYS.illegal);
+  });
+
+  test("invalid: non-consecutive ranks", () => {
+    const fix = [3, 4, 6].flatMap(pair); // skip 5
+    expect(play.get(fix)).toMatchObject(PLAYS.illegal);
+  });
+
+  test("invalid: triplet mixed with others", () => {
+    const fix = [
+      card.create(card.SUITS.Clubs, 3),
+      card.create(card.SUITS.Diamonds, 3),
+      card.create(card.SUITS.Hearts, 3),
+      card.create(card.SUITS.Clubs, 4),
+      card.create(card.SUITS.Diamonds, 4),
+      card.create(card.SUITS.Clubs, 5),
+    ];
+    expect(play.get(fix)).toMatchObject(PLAYS.illegal);
+  });
+
+  test("bomb3 rank < dragon rank < bomb4 rank", () => {
+    expect(PLAYS.bomb3.rank).toBeLessThan(PLAYS.dragon.rank);
+    expect(PLAYS.dragon.rank).toBeLessThan(PLAYS.bomb4.rank);
+  });
+});

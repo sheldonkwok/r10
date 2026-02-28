@@ -5,9 +5,10 @@ export const PLAYS = {
   pair: { name: "Pair", rank: 0 },
   straight: { name: "Straight", rank: 0 },
   bomb3: { name: "Three Card Bomb", rank: 1 },
-  bomb4: { name: "Four Card Bomb", rank: 2 },
-  bomb5: { name: "Five Card Bomb", rank: 3 },
-  bomb6: { name: "Six Card Bomb", rank: 4 },
+  dragon: { name: "Dragon", rank: 2 },
+  bomb4: { name: "Four Card Bomb", rank: 3 },
+  bomb5: { name: "Five Card Bomb", rank: 4 },
+  bomb6: { name: "Six Card Bomb", rank: 5 },
 
   illegal: { name: "Illegal", rank: -1, value: -1 },
 } as const;
@@ -36,8 +37,11 @@ export function get(cards: card.Card[]): Play {
 
   // Straight
   if (isStraight(cards)) {
-    return { ...PLAYS.straight, value: cards[cards.length - 1].value };
+    return { ...PLAYS.straight, value: highCardValue(cards) };
   }
+
+  // Dragon
+  if (isDragon(cards)) return { ...PLAYS.dragon, value: highCardValue(cards) };
 
   return PLAYS.illegal;
 }
@@ -72,6 +76,34 @@ function isStraight(cards: card.Card[]): boolean {
   }
 
   return true;
+}
+
+function isDragon(cards: card.Card[]): boolean {
+  const len = cards.length;
+  if (len < 6 || len % 2 !== 0) return false;
+
+  const rankCounts = new Map<number, number>();
+  for (const c of cards) rankCounts.set(c.rank, (rankCounts.get(c.rank) ?? 0) + 1);
+  for (const count of rankCounts.values()) if (count !== 2) return false;
+
+  const sortedRanks = [...rankCounts.keys()].sort((a, b) => a - b);
+  const isAWrap =
+    sortedRanks[sortedRanks.length - 1] === card.CARD_RANKS.K &&
+    sortedRanks[0] === card.CARD_RANKS.A;
+  if (isAWrap) sortedRanks.push(sortedRanks.shift()! + card.VALUE_MAX);
+
+  for (let i = 1; i < sortedRanks.length; i++) {
+    if (sortedRanks[i] - sortedRanks[i - 1] !== 1) return false;
+  }
+  return true;
+}
+
+function highCardValue(cards: card.Card[]): number {
+  const sorted = cards.slice().sort((a, b) => a.rank - b.rank);
+  const isAWrap =
+    sorted[sorted.length - 1].rank === card.CARD_RANKS.K &&
+    sorted[0].rank === card.CARD_RANKS.A;
+  return isAWrap ? sorted[0].value : sorted[sorted.length - 1].value;
 }
 
 type BombCount = Extract<
