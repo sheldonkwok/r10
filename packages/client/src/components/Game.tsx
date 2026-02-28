@@ -102,7 +102,6 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
               <div className="player-info">
                 <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
                 <span className="player-name">{player.username}</span>
-                {player.isBot && <span className="bot-badge">Bot</span>}
                 {isTheirTurn && <span className="turn-indicator">◀</span>}
               </div>
               <div className="player-hand">
