@@ -3,9 +3,9 @@ Use pnpm for package management instead of npm
 
 # Repo Packages Structure
 
-client is used for the frontend
-server is used for the backend
-shared is used for shared code. Game logic lives here
+* `client` is used for the frontend. All of the browser game rendering logic lives here.
+* `server` is used for the backend. It's a websocket server that maintains game state.
+* `shared` is used for shared code. Game logic lives here
 
 ## CSS Conventions
 

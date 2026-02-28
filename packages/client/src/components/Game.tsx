@@ -86,9 +86,9 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
       {state.currentPlay && (
         <div className="flex flex-row flex-nowrap gap-1 items-center overflow-x-auto">
           <span>Current play ({state.currentPlay.playType}): </span>
-          {state.currentPlay.cards.map((c) => (
+          {state.currentPlay.cards.map((c, i) => (
             <Card
-              key={`${c.rank}-${c.suit.short}`}
+              key={`${c.rank}-${c.suit.short}-${i}`}
               rank={c.rank}
               suitEmoji={c.suit.emoji}
               suit={suitVariant(c)}
@@ -115,7 +115,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
               <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
                 {player.hand.map((card, i) => (
                   <Card
-                    key={`${card.rank}-${card.suit.short}`}
+                    key={`${card.rank}-${card.suit.short}-${i}`}
                     rank={card.rank}
                     suitEmoji={card.suit.emoji}
                     suit={suitVariant(card)}
