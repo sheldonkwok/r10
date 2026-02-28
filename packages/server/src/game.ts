@@ -58,6 +58,13 @@ export class Game {
       .map((p) => p.socketId!);
   }
 
+  rejoinPlayer(discordUserId: string, newSocketId: string): boolean {
+    const player = this.players.find((p) => p.info.id === discordUserId);
+    if (!player || player.info.isBot) return false;
+    player.socketId = newSocketId;
+    return true;
+  }
+
   getCurrentPlayer(): InternalPlayer {
     return this.players[this.currentTurn];
   }

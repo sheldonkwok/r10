@@ -50,6 +50,18 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
   socket.on("lobby:join", async ({ roomId, token }) => {
     try {
       const user = await getDiscordUser(token);
+
+      const existingGame = getGame(roomId);
+      if (existingGame) {
+        const rejoined = existingGame.rejoinPlayer(user.id, socket.id);
+        if (rejoined) {
+          socketRooms.set(socket.id, { roomId });
+          await socket.join(roomId);
+          socket.emit("game:state", existingGame.getState());
+          return;
+        }
+      }
+
       const lobby = getOrCreateLobby(roomId);
       const avatar = avatarUrl(user.id, user.avatar);
       const added = lobby.addPlayer(socket.id, user.id, user.global_name ?? user.username, avatar);
