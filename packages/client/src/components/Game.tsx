@@ -1,11 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { play, compare, type GameState } from "shared";
+import { Card } from "./Card.tsx";
 
 interface GameProps {
   state: GameState;
   currentUserId: string;
   onPlayCards: (cardIndices: number[]) => void;
   onPass: () => void;
+}
+
+function suitVariant(card: { suit: { short: string } }): "red" | "black" {
+  return card.suit.short === "h" || card.suit.short === "d" ? "red" : "black";
 }
 
 export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
@@ -84,7 +89,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
         <div className="current-play">
           <span>Current play ({state.currentPlay.playType}): </span>
           {state.currentPlay.cards.map((c, i) => (
-            <span key={i} className="card">{c.display}</span>
+            <Card key={i} display={c.display} suit={suitVariant(c)} />
           ))}
           <span> by {state.players.find((p) => p.id === state.currentPlay?.playerId)?.username}</span>
         </div>
@@ -106,13 +111,14 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
               </div>
               <div className="player-hand">
                 {player.hand.map((card, i) => (
-                  <span
+                  <Card
                     key={i}
-                    className={`card ${isCurrentUser && isMyTurn ? "selectable" : ""} ${isCurrentUser && selectedIndices.has(i) ? "selected" : ""}`}
+                    display={card.display}
+                    suit={suitVariant(card)}
+                    selectable={isCurrentUser && isMyTurn}
+                    selected={isCurrentUser && selectedIndices.has(i)}
                     onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
-                  >
-                    {card.display}
-                  </span>
+                  />
                 ))}
               </div>
             </div>

@@ -1,0 +1,18 @@
+# Technology
+Use pnpm for package management instead of npm
+
+# Repo Packages Structure
+
+client is used for the frontend
+server is used for the backend
+shared is used for shared code. Game logic lives here
+
+## CSS Conventions
+
+This project uses **Tailwind CSS v4** with **class-variance-authority (CVA)** for styling.
+
+- Tailwind is integrated via the `@tailwindcss/vite` Vite plugin (no PostCSS config needed).
+- `packages/client/src/index.css` contains only `@import "tailwindcss"`.
+- Use `cva()` to define components with visual variants; extend `VariantProps` in the component props interface.
+- Do not write plain CSS classes for component appearance.
+

@@ -8,15 +8,18 @@
   },
   "dependencies": {
     "@discord/embedded-app-sdk": "^1.5.0",
+    "class-variance-authority": "^0.7.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "socket.io-client": "^4.8.0",
-    "shared": "workspace:*"
+    "shared": "workspace:*",
+    "socket.io-client": "^4.8.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "tailwindcss": "^4.2.1",
     "vite": "^6.0.0"
   }
 }
