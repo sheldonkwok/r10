@@ -50,8 +50,12 @@ const RANK_TO_FACE = {
   [CARD_RANKS["K"]]: "K",
 } as const;
 
+export function rankDisplay(rank: number): string {
+  return RANK_TO_FACE[rank] ?? String(rank);
+}
+
 function cardDisplay(suit: Suit, rank: number): string {
-  const display = rank > 1 && rank <= 10 ? rank : RANK_TO_FACE[rank];
+  const display = rankDisplay(number);
 
   return `${display}${suit.emoji}`;
 }

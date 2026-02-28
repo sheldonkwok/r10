@@ -86,10 +86,10 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
       </div>
 
       {state.currentPlay && (
-        <div className="current-play">
+        <div className="flex flex-row flex-nowrap gap-1 items-center overflow-x-auto">
           <span>Current play ({state.currentPlay.playType}): </span>
           {state.currentPlay.cards.map((c, i) => (
-            <Card key={i} display={c.display} suit={suitVariant(c)} />
+            <Card key={i} rank={c.rank} suitEmoji={c.suit.emoji} suit={suitVariant(c)} />
           ))}
           <span> by {state.players.find((p) => p.id === state.currentPlay?.playerId)?.username}</span>
         </div>
@@ -109,11 +109,12 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
                 <span className="player-name">{player.username}</span>
                 {isTheirTurn && <span className="turn-indicator">◀</span>}
               </div>
-              <div className="player-hand">
+              <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
                 {player.hand.map((card, i) => (
                   <Card
                     key={i}
-                    display={card.display}
+                    rank={card.rank}
+                    suitEmoji={card.suit.emoji}
                     suit={suitVariant(card)}
                     selectable={isCurrentUser && isMyTurn}
                     selected={isCurrentUser && selectedIndices.has(i)}
