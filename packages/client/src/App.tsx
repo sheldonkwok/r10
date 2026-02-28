@@ -16,7 +16,7 @@ export function App() {
   }
 
   if (!auth || !sdk) {
-    return <div className="loading">Connecting to Discord...</div>;
+    return <div className="loading">Loading...</div>;
   }
 
   if (gameState) {

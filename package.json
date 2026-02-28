@@ -2,8 +2,7 @@
   "name": "r10",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
-  "scripts": {
+"scripts": {
     "dev:server": "bun run --filter server dev",
     "dev:client": "bun run --filter client dev",
     "dev": "pnpm run /^dev:.*/",

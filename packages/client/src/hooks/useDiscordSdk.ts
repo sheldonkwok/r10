@@ -4,9 +4,6 @@ import type { DiscordSDK as DiscordSDKType } from "@discord/embedded-app-sdk";
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID as string;
 
-// Check if running inside Discord's iframe
-const isDiscordEmbedded = new URLSearchParams(window.location.search).has("frame_id");
-
 interface Auth {
   accessToken: string;
   user: {
@@ -33,7 +30,7 @@ export function useDiscordSdk(): UseDiscordSdkResult {
 
     async function init() {
       // Mock mode for browser development
-      if (!isDiscordEmbedded) {
+      if (!import.meta.env.PROD) {
         if (cancelled) return;
         setAuth({
           accessToken: "mock-token",

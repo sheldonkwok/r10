@@ -34,6 +34,16 @@ export async function exchangeToken(code: string): Promise<string> {
 }
 
 export async function getDiscordUser(token: string): Promise<DiscordUser> {
+  if (process.env.NODE_ENV !== "production" && token === "mock-token") {
+    return {
+      id: "mock-user-1",
+      username: "DevUser",
+      avatar: null,
+      discriminator: "0",
+      global_name: "Developer",
+    };
+  }
+
   const response = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${token}` },
   });
