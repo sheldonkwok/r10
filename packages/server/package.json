@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "vite-node --watch src/index.ts"
   },
   "dependencies": {
     "express": "^5.1.0",

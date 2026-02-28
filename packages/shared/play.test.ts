@@ -1,4 +1,4 @@
-import { expect, describe, test } from "bun:test";
+import { expect, describe, test } from "vitest";
 
 import * as card from "./card";
 import * as play from "./play";

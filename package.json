@@ -5,10 +5,9 @@
 "scripts": {
     "dev": "pnpm --filter server dev",
     "build": "pnpm --filter client build",
-    "test": "bun test --filter shared"
+    "test": "pnpm --filter shared test"
   },
   "devDependencies": {
-    "@types/bun": "latest",
     "typescript": "^5.0.0"
   }
 }
