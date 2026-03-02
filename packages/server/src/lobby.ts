@@ -31,7 +31,7 @@ export class Lobby {
     this.players.delete(socketId);
 
     if (wasHost && this.players.size > 0) {
-      const firstPlayer = this.players.values().next().value!;
+      const firstPlayer = this.players.values().next().value as LobbyPlayer;
       firstPlayer.isHost = true;
     }
   }

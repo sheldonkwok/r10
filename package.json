@@ -6,7 +6,7 @@
     "dev": "pnpm --filter server dev",
     "build": "pnpm --filter client build",
     "test": "pnpm --filter shared test",
-    "check": "pnpm -r exec tsc --noEmit && biome check --write ."
+    "check": "pnpm -r exec tsc --noEmit && biome check --write --error-on-warnings ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",

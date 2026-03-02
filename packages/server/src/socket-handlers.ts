@@ -11,7 +11,7 @@ interface SocketMeta {
   roomId: string;
 }
 
-function sendGameStateToPlayers(io: IOServer, roomId: string, game: Game) {
+function sendGameStateToPlayers(io: IOServer, _roomId: string, game: Game) {
   const state = game.getState();
   for (const socketId of game.getSocketIds()) {
     io.to(socketId).emit("game:state", state);

@@ -59,8 +59,7 @@ function isStraight(cards: card.Card[]): boolean {
   const isAWrap = sorted[len - 1].rank === card.CARD_RANKS.K && sorted[0].rank === card.CARD_RANKS.A;
 
   if (isAWrap) {
-    const temp = sorted.shift()!;
-    sorted.push(temp);
+    sorted.push(sorted.shift() as card.Card);
   }
 
   for (let i = 1; i < len; i++) {
@@ -87,7 +86,7 @@ function isDragon(cards: card.Card[]): boolean {
   const sortedRanks = [...rankCounts.keys()].sort((a, b) => a - b);
   const isAWrap =
     sortedRanks[sortedRanks.length - 1] === card.CARD_RANKS.K && sortedRanks[0] === card.CARD_RANKS.A;
-  if (isAWrap) sortedRanks.push(sortedRanks.shift()! + card.VALUE_MAX);
+  if (isAWrap) sortedRanks.push((sortedRanks.shift() as number) + card.VALUE_MAX);
 
   for (let i = 1; i < sortedRanks.length; i++) {
     if (sortedRanks[i] - sortedRanks[i - 1] !== 1) return false;

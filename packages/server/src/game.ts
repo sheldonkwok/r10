@@ -67,7 +67,7 @@ export class Game {
   }
 
   getSocketIds(): string[] {
-    return this.players.filter((p) => p.socketId !== null).map((p) => p.socketId!);
+    return this.players.flatMap((p) => (p.socketId !== null ? [p.socketId] : []));
   }
 
   rejoinPlayer(discordUserId: string, newSocketId: string): boolean {

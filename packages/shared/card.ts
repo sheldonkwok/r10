@@ -44,10 +44,10 @@ export const CARD_RANKS = {
 };
 
 const RANK_TO_FACE = {
-  [CARD_RANKS["A"]]: "A",
-  [CARD_RANKS["J"]]: "J",
-  [CARD_RANKS["Q"]]: "Q",
-  [CARD_RANKS["K"]]: "K",
+  [CARD_RANKS.A]: "A",
+  [CARD_RANKS.J]: "J",
+  [CARD_RANKS.Q]: "Q",
+  [CARD_RANKS.K]: "K",
 } as const;
 
 export function rankDisplay(rank: number): string {

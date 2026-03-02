@@ -14,12 +14,15 @@ interface DiscordUser {
 }
 
 export async function exchangeToken(code: string): Promise<string> {
+  const { DISCORD_CLIENT_ID: clientId, DISCORD_CLIENT_SECRET: clientSecret } = process.env;
+  if (!clientId || !clientSecret) throw new Error("Missing DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET");
+
   const response = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.DISCORD_CLIENT_ID!,
-      client_secret: process.env.DISCORD_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       grant_type: "authorization_code",
       code,
     }),
@@ -59,6 +62,6 @@ export function avatarUrl(userId: string, avatar: string | null): string {
   if (avatar) {
     return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png`;
   }
-  const index = parseInt(userId) % 5;
-  return `https://cdn.discordapp.com/embed/avatars/${isNaN(index) ? 0 : index}.png`;
+  const index = parseInt(userId, 10) % 5;
+  return `https://cdn.discordapp.com/embed/avatars/${Number.isNaN(index) ? 0 : index}.png`;
 }
