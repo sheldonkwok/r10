@@ -33,6 +33,7 @@ export interface GameState {
   currentTurn: number;
   currentPlay: CurrentPlay | null;
   lastPlayerId: string | null;
+  loserId: string | null;
 }
 
 export interface ClientToServerEvents {

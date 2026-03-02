@@ -42,6 +42,11 @@ export class Game {
     }));
   }
 
+  private getLoserId(): string | null {
+    const withCards = this.players.filter((p) => p.info.hand.length > 0);
+    return withCards.length === 1 ? withCards[0].info.id : null;
+  }
+
   getState(): GameState {
     const currentPlay: CurrentPlay | null = this.currentPlayInternal
       ? {
@@ -57,6 +62,7 @@ export class Game {
       currentTurn: this.currentTurn,
       currentPlay,
       lastPlayerId: this.lastPlayerId,
+      loserId: this.getLoserId(),
     };
   }
 
@@ -81,6 +87,10 @@ export class Game {
   }
 
   makePlay(cardIndices: number[]): { success: boolean; error?: string } {
+    if (this.getLoserId() !== null) {
+      return { success: false, error: "Game is over" };
+    }
+
     const player = this.getCurrentPlayer();
     const cards = cardIndices.map((i) => player.info.hand[i]);
     const newPlay = play.get(cards);
@@ -119,6 +129,10 @@ export class Game {
   }
 
   pass(): { success: boolean; error?: string } {
+    if (this.getLoserId() !== null) {
+      return { success: false, error: "Game is over" };
+    }
+
     if (!this.currentPlayInternal) {
       return { success: false, error: "Cannot pass on an empty round" };
     }

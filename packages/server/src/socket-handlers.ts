@@ -28,7 +28,7 @@ async function processBotTurns(io: IOServer, roomId: string, game: Game) {
 
   while (game.isCurrentPlayerBot() && safety < maxIterations) {
     safety++;
-    await sleep(1000);
+    await sleep(100);
     try {
       game.makeBotPlay();
       sendGameStateToPlayers(io, roomId, game);
