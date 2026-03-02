@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { compare, type GameState, play } from "shared";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Card } from "./Card.tsx";
 
 interface GameProps {
@@ -75,93 +76,102 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
     onPlayCards(indices);
   };
 
-  return (
-    <div className="game">
-      <h1>Red 10</h1>
-
-      <div className="turn-info">
-        {isMyTurn ? <strong>Your turn!</strong> : <span>Waiting for {turnPlayer?.username}...</span>}
-      </div>
-
-      {state.currentPlay && (
-        <div className="flex flex-row flex-nowrap gap-1 items-center overflow-x-auto">
-          <span>Current play ({state.currentPlay.playType}): </span>
-          {state.currentPlay.cards.map((c, i) => (
+  const renderPlayerRow = (player: (typeof state.players)[number], playerIndex: number) => {
+    const isCurrentUser = player.id === currentUserId;
+    const isTheirTurn = state.currentTurn === playerIndex;
+    return (
+      <div
+        key={player.id}
+        className={cn("player-row", isCurrentUser && "current", isTheirTurn && "active-turn")}
+      >
+        <div className="player-info">
+          <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
+          <span className="player-name">{player.username}</span>
+          {isTheirTurn && <span className="turn-indicator">◀</span>}
+          {player.id === state.loserId && <span>Loser</span>}
+        </div>
+        <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
+          {player.hand.map((card, i) => (
             <Card
-              key={`${c.rank}-${c.suit.short}-${i}`}
-              rank={c.rank}
-              suitEmoji={c.suit.emoji}
-              suit={suitVariant(c)}
+              key={`${card.rank}-${card.suit.short}-${i}`}
+              rank={card.rank}
+              suitEmoji={card.suit.emoji}
+              suit={suitVariant(card)}
+              selectable={isCurrentUser && isMyTurn}
+              selected={isCurrentUser && selectedIndices.has(i)}
+              onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
             />
           ))}
-          <span> by {state.players.find((p) => p.id === state.currentPlay?.playerId)?.username}</span>
         </div>
-      )}
-
-      {currentPlayer && isMyTurn && !state.loserId && (
-        <div className="play-area">
-          <div className="selection-info">
-            {selectedCards.length === 0 ? (
-              <span>Select cards to play</span>
-            ) : (
-              <span>
-                {selectedPlay?.name}: {selectedCards.map((c) => c.display).join(" ")}
-              </span>
-            )}
-          </div>
-          <Button onClick={handlePlay} disabled={!isValidPlay}>
-            Play {selectedPlay?.name ?? ""}
-          </Button>
-          <Button onClick={onPass} disabled={!canPass}>
-            Pass
-          </Button>
-          <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
-            Clear
-          </Button>
-        </div>
-      )}
-
-      <div className="players-list">
-        {state.players.map((player, playerIndex) => {
-          const isCurrentUser = player.id === currentUserId;
-          const isTheirTurn = state.currentTurn === playerIndex;
-          return (
-            <div
-              key={player.id}
-              className={`player-row ${isCurrentUser ? "current" : ""} ${isTheirTurn ? "active-turn" : ""}`}
-            >
-              <div className="player-info">
-                <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
-                <span className="player-name">{player.username}</span>
-                {isTheirTurn && <span className="turn-indicator">◀</span>}
-                {player.id === state.loserId && <span>Loser</span>}
-              </div>
-              <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
-                {player.hand.map((card, i) => (
-                  <Card
-                    key={`${card.rank}-${card.suit.short}-${i}`}
-                    rank={card.rank}
-                    suitEmoji={card.suit.emoji}
-                    suit={suitVariant(card)}
-                    selectable={isCurrentUser && isMyTurn}
-                    selected={isCurrentUser && selectedIndices.has(i)}
-                    onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
       </div>
+    );
+  };
 
-      {state.loserId && (
-        <div className="game-over">
-          <strong>
-            {state.players.find((p) => p.id === state.loserId)?.username} loses!
-          </strong>
+  return (
+    <div className="game">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <h1>Red 10</h1>
+
+          <div className="turn-info">
+            {isMyTurn ? <strong>Your turn!</strong> : <span>Waiting for {turnPlayer?.username}...</span>}
+          </div>
+
+          {state.currentPlay && (
+            <div className="flex flex-row flex-nowrap gap-1 items-center overflow-x-auto">
+              <span>Current play ({state.currentPlay.playType}): </span>
+              {state.currentPlay.cards.map((c, i) => (
+                <Card
+                  key={`${c.rank}-${c.suit.short}-${i}`}
+                  rank={c.rank}
+                  suitEmoji={c.suit.emoji}
+                  suit={suitVariant(c)}
+                />
+              ))}
+              <span> by {state.players.find((p) => p.id === state.currentPlay?.playerId)?.username}</span>
+            </div>
+          )}
+
+          {currentPlayer && isMyTurn && !state.loserId && (
+            <div className="play-area">
+              <div className="selection-info">
+                {selectedCards.length === 0 ? (
+                  <span>Select cards to play</span>
+                ) : (
+                  <span>
+                    {selectedPlay?.name}: {selectedCards.map((c) => c.display).join(" ")}
+                  </span>
+                )}
+              </div>
+              <Button onClick={handlePlay} disabled={!isValidPlay}>
+                Play {selectedPlay?.name ?? ""}
+              </Button>
+              <Button onClick={onPass} disabled={!canPass}>
+                Pass
+              </Button>
+              <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
+                Clear
+              </Button>
+            </div>
+          )}
+
+          {state.loserId && (
+            <div className="game-over">
+              <strong>{state.players.find((p) => p.id === state.loserId)?.username} loses!</strong>
+            </div>
+          )}
+
+          {state.players.flatMap((player, playerIndex) =>
+            player.id === currentUserId ? [renderPlayerRow(player, playerIndex)] : [],
+          )}
         </div>
-      )}
 
+        <div className="players-list">
+          {state.players.flatMap((player, playerIndex) =>
+            player.id !== currentUserId ? [renderPlayerRow(player, playerIndex)] : [],
+          )}
+        </div>
+      </div>
     </div>
   );
 }
