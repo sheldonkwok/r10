@@ -45,6 +45,8 @@ app.use((_req, res, next) => {
   next();
 });
 
+let viteServer: { close(): Promise<void> } | undefined;
+
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(clientDist));
   app.get("*", (_req, res) => res.sendFile(path.join(clientDist, "index.html")));
@@ -65,6 +67,7 @@ if (process.env.NODE_ENV === "production") {
     },
     appType: "spa",
   });
+  viteServer = vite;
   app.use(vite.middlewares);
 }
 
@@ -72,3 +75,10 @@ const PORT = process.env.PORT ?? 3000;
 httpServer.listen(PORT, () => {
   console.log(`Server listening on :${PORT}`);
 });
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(async () => {
+    await viteServer?.close();
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+  });
+}

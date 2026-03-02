@@ -110,6 +110,11 @@ export class Game {
     this.lastPlayerId = player.info.id;
     this.advanceTurn();
 
+    if (player.info.hand.length === 0) {
+      this.currentPlayInternal = null;
+      this.lastPlayerId = null;
+    }
+
     return { success: true };
   }
 
@@ -134,7 +139,12 @@ export class Game {
   }
 
   private advanceTurn(): void {
-    this.currentTurn = (this.currentTurn + 1) % this.players.length;
+    const totalPlayers = this.players.length;
+    let steps = 0;
+    do {
+      this.currentTurn = (this.currentTurn + 1) % totalPlayers;
+      steps++;
+    } while (this.players[this.currentTurn].info.hand.length === 0 && steps < totalPlayers);
   }
 
   isCurrentPlayerBot(): boolean {

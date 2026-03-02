@@ -99,35 +99,40 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
       )}
 
       <div className="players-list">
-        {state.players.map((player, playerIndex) => {
-          const isCurrentUser = player.id === currentUserId;
-          const isTheirTurn = state.currentTurn === playerIndex;
-          return (
-            <div
-              key={player.id}
-              className={`player-row ${isCurrentUser ? "current" : ""} ${isTheirTurn ? "active-turn" : ""}`}
-            >
-              <div className="player-info">
-                <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
-                <span className="player-name">{player.username}</span>
-                {isTheirTurn && <span className="turn-indicator">◀</span>}
+        {(() => {
+          const playersWithCards = state.players.filter((p) => p.hand.length > 0);
+          const loserId = playersWithCards.length === 1 ? playersWithCards[0].id : null;
+          return state.players.map((player, playerIndex) => {
+            const isCurrentUser = player.id === currentUserId;
+            const isTheirTurn = state.currentTurn === playerIndex;
+            return (
+              <div
+                key={player.id}
+                className={`player-row ${isCurrentUser ? "current" : ""} ${isTheirTurn ? "active-turn" : ""}`}
+              >
+                <div className="player-info">
+                  <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
+                  <span className="player-name">{player.username}</span>
+                  {isTheirTurn && <span className="turn-indicator">◀</span>}
+                  {player.id === loserId && <span>Loser</span>}
+                </div>
+                <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
+                  {player.hand.map((card, i) => (
+                    <Card
+                      key={`${card.rank}-${card.suit.short}-${i}`}
+                      rank={card.rank}
+                      suitEmoji={card.suit.emoji}
+                      suit={suitVariant(card)}
+                      selectable={isCurrentUser && isMyTurn}
+                      selected={isCurrentUser && selectedIndices.has(i)}
+                      onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
-                {player.hand.map((card, i) => (
-                  <Card
-                    key={`${card.rank}-${card.suit.short}-${i}`}
-                    rank={card.rank}
-                    suitEmoji={card.suit.emoji}
-                    suit={suitVariant(card)}
-                    selectable={isCurrentUser && isMyTurn}
-                    selected={isCurrentUser && selectedIndices.has(i)}
-                    onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
 
       {currentPlayer && isMyTurn && (
