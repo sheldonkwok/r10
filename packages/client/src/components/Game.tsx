@@ -98,6 +98,29 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
         </div>
       )}
 
+      {currentPlayer && isMyTurn && !state.loserId && (
+        <div className="play-area">
+          <div className="selection-info">
+            {selectedCards.length === 0 ? (
+              <span>Select cards to play</span>
+            ) : (
+              <span>
+                {selectedPlay?.name}: {selectedCards.map((c) => c.display).join(" ")}
+              </span>
+            )}
+          </div>
+          <Button onClick={handlePlay} disabled={!isValidPlay}>
+            Play {selectedPlay?.name ?? ""}
+          </Button>
+          <Button onClick={onPass} disabled={!canPass}>
+            Pass
+          </Button>
+          <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
+            Clear
+          </Button>
+        </div>
+      )}
+
       <div className="players-list">
         {state.players.map((player, playerIndex) => {
           const isCurrentUser = player.id === currentUserId;
@@ -139,28 +162,6 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
         </div>
       )}
 
-      {currentPlayer && isMyTurn && !state.loserId && (
-        <div className="play-area">
-          <div className="selection-info">
-            {selectedCards.length === 0 ? (
-              <span>Select cards to play</span>
-            ) : (
-              <span>
-                {selectedPlay?.name}: {selectedCards.map((c) => c.display).join(" ")}
-              </span>
-            )}
-          </div>
-          <Button onClick={handlePlay} disabled={!isValidPlay}>
-            Play {selectedPlay?.name ?? ""}
-          </Button>
-          <Button onClick={onPass} disabled={!canPass}>
-            Pass
-          </Button>
-          <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
-            Clear
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
