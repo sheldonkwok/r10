@@ -34,7 +34,7 @@ export interface GameState {
   currentTurn: number;
   currentPlay: CurrentPlay | null;
   lastPlayerId: string | null;
-  loserId: string | null;
+  losingTeam: "red" | "black" | null;
   firstFinisherId: string | null;
   winningTeam: "red" | "black" | "wash" | null;
 }

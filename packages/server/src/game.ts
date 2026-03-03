@@ -4,6 +4,8 @@ import {
   compare,
   type GamePlayer,
   type GameState,
+  getLosingTeam,
+  getWinningTeam,
   type LobbyPlayer,
   play,
 } from "shared";
@@ -51,21 +53,6 @@ export class Game {
     }
   }
 
-  private getLoserId(): string | null {
-    const withCards = this.players.filter((p) => p.info.hand.length > 0);
-    return withCards.length === 1 ? withCards[0].info.id : null;
-  }
-
-  private getWinningTeam(): "red" | "black" | "wash" | null {
-    const loserId = this.getLoserId();
-    if (!loserId || !this.firstFinisherId) return null;
-    const loser = this.players.find((p) => p.info.id === loserId);
-    const first = this.players.find((p) => p.info.id === this.firstFinisherId);
-    if (!loser || !first) return null;
-    if (first.info.team === loser.info.team) return "wash";
-    return first.info.team;
-  }
-
   getState(): GameState {
     const currentPlay: CurrentPlay | null = this.currentPlayInternal
       ? {
@@ -75,15 +62,16 @@ export class Game {
         }
       : null;
 
+    const playerInfos = this.players.map((p) => p.info);
     return {
       roomId: this.roomId,
-      players: this.players.map((p) => p.info),
+      players: playerInfos,
       currentTurn: this.currentTurn,
       currentPlay,
       lastPlayerId: this.lastPlayerId,
-      loserId: this.getLoserId(),
+      losingTeam: getLosingTeam(playerInfos),
       firstFinisherId: this.firstFinisherId,
-      winningTeam: this.getWinningTeam(),
+      winningTeam: getWinningTeam(playerInfos, this.firstFinisherId),
     };
   }
 
@@ -108,7 +96,7 @@ export class Game {
   }
 
   makePlay(cardIndices: number[]): { success: boolean; error?: string } {
-    if (this.getLoserId() !== null) {
+    if (getLosingTeam(this.players.map((p) => p.info)) !== null) {
       return { success: false, error: "Game is over" };
     }
 
@@ -153,7 +141,7 @@ export class Game {
   }
 
   pass(): { success: boolean; error?: string } {
-    if (this.getLoserId() !== null) {
+    if (getLosingTeam(this.players.map((p) => p.info)) !== null) {
       return { success: false, error: "Game is over" };
     }
 

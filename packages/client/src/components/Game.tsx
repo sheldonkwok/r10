@@ -90,7 +90,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
             {player.username}
           </span>
           {isTheirTurn && <span className="turn-indicator">◀</span>}
-          {player.id === state.loserId && <span>Loser</span>}
+          {player.team === state.losingTeam && <span>Loser</span>}
         </div>
         <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
           {player.hand.map((card, i) => (
@@ -165,7 +165,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
                 <strong>{state.winningTeam === "red" ? "Red" : "Black"} team wins!</strong>
               )}
               <span>First out: {state.players.find((p) => p.id === state.firstFinisherId)?.username}</span>
-              <span>Last out: {state.players.find((p) => p.id === state.loserId)?.username}</span>
+              <span>Losing team: {state.losingTeam}</span>
             </div>
           )}
 
