@@ -26,6 +26,18 @@ export class Lobby {
     return true;
   }
 
+  // Returns the old socketId if the player was already in the lobby, null otherwise.
+  updateSocketId(newSocketId: string, discordId: string): string | null {
+    for (const [oldSocketId, player] of this.players) {
+      if (player.id === discordId) {
+        this.players.delete(oldSocketId);
+        this.players.set(newSocketId, player);
+        return oldSocketId;
+      }
+    }
+    return null;
+  }
+
   removePlayer(socketId: string): void {
     const wasHost = this.players.get(socketId)?.isHost ?? false;
     this.players.delete(socketId);

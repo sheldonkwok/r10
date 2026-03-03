@@ -79,6 +79,6 @@ httpServer.listen(PORT, () => {
 if (import.meta.hot) {
   import.meta.hot.dispose(async () => {
     await viteServer?.close();
-    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+    await new Promise<void>((resolve) => io.close(() => resolve()));
   });
 }

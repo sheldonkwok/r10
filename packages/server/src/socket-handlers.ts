@@ -63,12 +63,17 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
       }
 
       const lobby = getOrCreateLobby(roomId);
-      const avatar = avatarUrl(user.id, user.avatar);
-      const added = lobby.addPlayer(socket.id, user.id, user.global_name ?? user.username, avatar);
 
-      if (!added) {
-        socket.emit("lobby:error", "Lobby is full or you are already in it");
-        return;
+      const oldSocketId = lobby.updateSocketId(socket.id, user.id);
+      if (oldSocketId) {
+        socketRooms.delete(oldSocketId);
+      } else {
+        const avatar = avatarUrl(user.id, user.avatar);
+        const added = lobby.addPlayer(socket.id, user.id, user.global_name ?? user.username, avatar);
+        if (!added) {
+          socket.emit("lobby:error", "Lobby is full");
+          return;
+        }
       }
 
       socketRooms.set(socket.id, { roomId });
