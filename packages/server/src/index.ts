@@ -1,3 +1,4 @@
+import type { Server as HttpServer } from "node:http";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +31,13 @@ app.post("/api/token", async (req, res) => {
   }
 });
 
-const httpServer = createServer(app);
+// Reuse HTTP server across hot reloads to avoid EADDRINUSE.
+// On first boot, hot.data.httpServer is undefined so we create one.
+// On subsequent reloads, we reuse the existing server and just swap handlers.
+const httpServer: HttpServer = (import.meta.hot?.data.httpServer as HttpServer | undefined) ?? createServer();
+httpServer.removeAllListeners("request");
+httpServer.removeAllListeners("upgrade");
+httpServer.on("request", app);
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: { origin: "*" },
@@ -45,40 +52,46 @@ app.use((_req, res, next) => {
   next();
 });
 
-let viteServer: { close(): Promise<void> } | undefined;
-
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(clientDist));
   app.get("*", (_req, res) => res.sendFile(path.join(clientDist, "index.html")));
 } else {
-  const { createServer: createViteServer } = await import("vite");
-  const vite = await createViteServer({
-    root: clientRoot,
-    server: {
-      middlewareMode: true,
-      hmr: { clientPort: 443 },
-      allowedHosts: [
-        "localhost",
-        "127.0.0.1",
-        ".discord.com",
-        ".discordsays.com",
-        "shelarchy.wombat-dragon.ts.net",
-      ],
-    },
-    appType: "spa",
-  });
-  viteServer = vite;
-  app.use(vite.middlewares);
+  type ViteDevServer = import("vite").ViteDevServer;
+  let viteServer = import.meta.hot?.data.viteServer as ViteDevServer | undefined;
+  if (!viteServer) {
+    const { createServer: createViteServer } = await import("vite");
+    viteServer = await createViteServer({
+      root: clientRoot,
+      server: {
+        middlewareMode: true,
+        hmr: { clientPort: 443 },
+        allowedHosts: [
+          "localhost",
+          "127.0.0.1",
+          ".discord.com",
+          ".discordsays.com",
+          "shelarchy.wombat-dragon.ts.net",
+        ],
+      },
+      appType: "spa",
+    });
+    if (import.meta.hot) {
+      import.meta.hot.data.viteServer = viteServer;
+    }
+  }
+  app.use(viteServer.middlewares);
 }
 
 const PORT = process.env.PORT ?? 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Server listening on :${PORT}`);
-});
+if (!httpServer.listening) {
+  httpServer.listen(PORT, () => {
+    console.log(`Server listening on :${PORT}`);
+  });
+}
 
 if (import.meta.hot) {
-  import.meta.hot.dispose(async () => {
-    await viteServer?.close();
-    await new Promise<void>((resolve) => io.close(() => resolve()));
+  import.meta.hot.data.httpServer = httpServer;
+  import.meta.hot.dispose(() => {
+    io.disconnectSockets(true);
   });
 }
