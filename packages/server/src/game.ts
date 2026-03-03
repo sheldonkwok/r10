@@ -25,6 +25,7 @@ export class Game {
   private currentTurn: number = 0;
   private currentPlayInternal: InternalPlay | null = null;
   private lastPlayerId: string | null = null;
+  private firstFinisherId: string | null = null;
 
   constructor(roomId: string, lobbyPlayers: [string, LobbyPlayer][]) {
     this.roomId = roomId;
@@ -37,14 +38,32 @@ export class Game {
         avatarUrl: player.avatarUrl,
         isBot: player.isBot,
         hand: hands[index],
+        team: "black" as const,
       },
       socketId: player.isBot ? null : socketId,
     }));
+
+    for (const player of this.players) {
+      const hasRedTen = player.info.hand.some(
+        (c) => c.rank === 10 && (c.suit.short === "d" || c.suit.short === "h"),
+      );
+      player.info.team = hasRedTen ? "red" : "black";
+    }
   }
 
   private getLoserId(): string | null {
     const withCards = this.players.filter((p) => p.info.hand.length > 0);
     return withCards.length === 1 ? withCards[0].info.id : null;
+  }
+
+  private getWinningTeam(): "red" | "black" | "wash" | null {
+    const loserId = this.getLoserId();
+    if (!loserId || !this.firstFinisherId) return null;
+    const loser = this.players.find((p) => p.info.id === loserId);
+    const first = this.players.find((p) => p.info.id === this.firstFinisherId);
+    if (!loser || !first) return null;
+    if (first.info.team === loser.info.team) return "wash";
+    return first.info.team;
   }
 
   getState(): GameState {
@@ -63,6 +82,8 @@ export class Game {
       currentPlay,
       lastPlayerId: this.lastPlayerId,
       loserId: this.getLoserId(),
+      firstFinisherId: this.firstFinisherId,
+      winningTeam: this.getWinningTeam(),
     };
   }
 
@@ -121,6 +142,9 @@ export class Game {
     this.advanceTurn();
 
     if (player.info.hand.length === 0) {
+      if (this.firstFinisherId === null) {
+        this.firstFinisherId = player.info.id;
+      }
       this.currentPlayInternal = null;
       this.lastPlayerId = null;
     }

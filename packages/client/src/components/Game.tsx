@@ -86,7 +86,9 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
       >
         <div className="player-info">
           <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
-          <span className="player-name">{player.username}</span>
+          <span className={cn("player-name", player.team === "red" ? "text-red-500" : "text-gray-800")}>
+            {player.username}
+          </span>
           {isTheirTurn && <span className="turn-indicator">◀</span>}
           {player.id === state.loserId && <span>Loser</span>}
         </div>
@@ -132,7 +134,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
             </div>
           )}
 
-          {currentPlayer && isMyTurn && !state.loserId && (
+          {currentPlayer && isMyTurn && state.winningTeam === null && (
             <div className="play-area">
               <div className="selection-info">
                 {selectedCards.length === 0 ? (
@@ -155,9 +157,15 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
             </div>
           )}
 
-          {state.loserId && (
+          {state.winningTeam && (
             <div className="game-over">
-              <strong>{state.players.find((p) => p.id === state.loserId)?.username} loses!</strong>
+              {state.winningTeam === "wash" ? (
+                <strong>Wash! (tie)</strong>
+              ) : (
+                <strong>{state.winningTeam === "red" ? "Red" : "Black"} team wins!</strong>
+              )}
+              <span>First out: {state.players.find((p) => p.id === state.firstFinisherId)?.username}</span>
+              <span>Last out: {state.players.find((p) => p.id === state.loserId)?.username}</span>
             </div>
           )}
 

@@ -19,6 +19,7 @@ export interface GamePlayer {
   avatarUrl: string;
   isBot: boolean;
   hand: import("./card.ts").Card[];
+  team: "red" | "black";
 }
 
 export interface CurrentPlay {
@@ -34,6 +35,8 @@ export interface GameState {
   currentPlay: CurrentPlay | null;
   lastPlayerId: string | null;
   loserId: string | null;
+  firstFinisherId: string | null;
+  winningTeam: "red" | "black" | "wash" | null;
 }
 
 export interface ClientToServerEvents {

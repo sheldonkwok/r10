@@ -7,7 +7,7 @@ Red 10 is a **team-based** game where the objective is to have your entire team 
 
 ## 👥 Teams and Dealing
 * **Players and Cards:** Each person (6 players total) will be dealt **13 cards**.
-* **Team Formation:** Teams are decided by: Who has a **Red 10** in their hand and who doesn't have a Red 10.
+* **Team Formation:** Teams are decided by: Who has a **Red 10** in their hand and who doesn't have a Red 10. Players with a red 10 are on the team. Others are on the black team.
     * Teams can be **3 vs 3**, **2 vs 4**, or **1 vs 5**.
 
 ---
