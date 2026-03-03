@@ -17,5 +17,5 @@ This project uses **Tailwind CSS v4** with **class-variance-authority (CVA)** fo
 - Do not write plain CSS classes for component appearance.
 
 # Evaluations After Writing Code
-An evaluation is defined as running `pnpm check` followed by `pnpm test`
+An evaluation is defined as running `pnpm check` 
 Run an evaluation after making any change to code

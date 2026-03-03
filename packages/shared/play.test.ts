@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import * as card from "./card";
+import compare from "./compare";
 import * as play from "./play";
 
 const PLAYS = play.PLAYS;
@@ -130,9 +131,65 @@ describe("dragon", () => {
     ];
     expect(play.get(fix)).toMatchObject(PLAYS.illegal);
   });
+});
 
-  test("bomb3 rank < dragon rank < bomb4 rank", () => {
-    expect(PLAYS.bomb3.rank).toBeLessThan(PLAYS.dragon.rank);
-    expect(PLAYS.dragon.rank).toBeLessThan(PLAYS.bomb4.rank);
+describe("dragon compare", () => {
+  function pair(rank: number) {
+    return [card.create(card.SUITS.Clubs, rank), card.create(card.SUITS.Diamonds, rank)];
+  }
+
+  const dragon = play.get([3, 4, 5].flatMap(pair)); // value 3
+  const dragonHigh = play.get([5, 6, 7].flatMap(pair)); // value 5
+
+  test("Dragon cannot be played on a single", () => {
+    const single = play.get([card.create(card.SUITS.Clubs, 5)]);
+    expect(compare(single, dragon).valid).toBe(false);
+  });
+
+  test("Dragon cannot be played on a pair", () => {
+    const pairPlay = play.get([card.create(card.SUITS.Clubs, 5), card.create(card.SUITS.Diamonds, 5)]);
+    expect(compare(pairPlay, dragon).valid).toBe(false);
+  });
+
+  test("Dragon cannot be played on a straight", () => {
+    const straight = play.get([3, 4, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(straight, dragon).valid).toBe(false);
+  });
+
+  test("Dragon cannot be played on bomb3", () => {
+    const bomb3 = play.get([5, 5, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(bomb3, dragon).valid).toBe(false);
+  });
+
+  test("bomb3 cannot beat Dragon", () => {
+    const bomb3 = play.get([5, 5, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(dragon, bomb3).valid).toBe(false);
+  });
+
+  test("bomb4 beats Dragon", () => {
+    const bomb4 = play.get([5, 5, 5, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(dragon, bomb4).valid).toBe(true);
+  });
+
+  test("bomb5 beats Dragon", () => {
+    const bomb5 = play.get([5, 5, 5, 5, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(dragon, bomb5).valid).toBe(true);
+  });
+
+  test("bomb6 beats Dragon", () => {
+    const bomb6 = play.get([5, 5, 5, 5, 5, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(dragon, bomb6).valid).toBe(true);
+  });
+
+  test("Dragon beats Dragon with higher value", () => {
+    expect(compare(dragon, dragonHigh).valid).toBe(true);
+  });
+
+  test("Dragon cannot beat Dragon with lower value", () => {
+    expect(compare(dragonHigh, dragon).valid).toBe(false);
+  });
+
+  test("Dragon cannot beat Dragon with equal value", () => {
+    expect(compare(dragon, dragon).valid).toBe(false);
   });
 });

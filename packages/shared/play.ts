@@ -4,11 +4,11 @@ export const PLAYS = {
   single: { name: "Single", rank: 0 },
   pair: { name: "Pair", rank: 0 },
   straight: { name: "Straight", rank: 0 },
+  dragon: { name: "Dragon", rank: 0 },
   bomb3: { name: "Three Card Bomb", rank: 1 },
-  dragon: { name: "Dragon", rank: 2 },
-  bomb4: { name: "Four Card Bomb", rank: 3 },
-  bomb5: { name: "Five Card Bomb", rank: 4 },
-  bomb6: { name: "Six Card Bomb", rank: 5 },
+  bomb4: { name: "Four Card Bomb", rank: 2 },
+  bomb5: { name: "Five Card Bomb", rank: 3 },
+  bomb6: { name: "Six Card Bomb", rank: 4 },
 
   illegal: { name: "Illegal", rank: -1, value: -1 },
 } as const;
