@@ -1,12 +1,16 @@
-import type { Server as HttpServer } from "node:http";
-import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import type { ClientToServerEvents, ServerToClientEvents } from "shared";
-import { Server } from "socket.io";
 import { exchangeToken } from "./auth.ts";
+import {
+  getOrCreateHttpServer,
+  getOrCreateIo,
+  getOrCreateViteServer,
+  saveHotData,
+  swapExpressApp,
+} from "./hot-reload.ts";
 import { registerHandlers } from "./socket-handlers.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -31,18 +35,11 @@ app.post("/api/token", async (req, res) => {
   }
 });
 
-// Reuse HTTP server across hot reloads to avoid EADDRINUSE.
-// On first boot, hot.data.httpServer is undefined so we create one.
-// On subsequent reloads, we reuse the existing server and just swap handlers.
-const httpServer: HttpServer = (import.meta.hot?.data.httpServer as HttpServer | undefined) ?? createServer();
-httpServer.removeAllListeners("request");
-httpServer.removeAllListeners("upgrade");
-httpServer.on("request", app);
+const httpServer = getOrCreateHttpServer(import.meta.hot);
+swapExpressApp(import.meta.hot, httpServer, app);
 
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-  cors: { origin: "*" },
-});
-
+const io = getOrCreateIo<ClientToServerEvents, ServerToClientEvents>(import.meta.hot, httpServer);
+io.removeAllListeners("connection");
 io.on("connection", (socket) => {
   registerHandlers(io, socket);
 });
@@ -56,11 +53,9 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(clientDist));
   app.get("*", (_req, res) => res.sendFile(path.join(clientDist, "index.html")));
 } else {
-  type ViteDevServer = import("vite").ViteDevServer;
-  let viteServer = import.meta.hot?.data.viteServer as ViteDevServer | undefined;
-  if (!viteServer) {
+  const viteServer = await getOrCreateViteServer(import.meta.hot, async () => {
     const { createServer: createViteServer } = await import("vite");
-    viteServer = await createViteServer({
+    return createViteServer({
       root: clientRoot,
       server: {
         middlewareMode: true,
@@ -75,10 +70,7 @@ if (process.env.NODE_ENV === "production") {
       },
       appType: "spa",
     });
-    if (import.meta.hot) {
-      import.meta.hot.data.viteServer = viteServer;
-    }
-  }
+  });
   app.use(viteServer.middlewares);
 }
 
@@ -90,8 +82,5 @@ if (!httpServer.listening) {
 }
 
 if (import.meta.hot) {
-  import.meta.hot.data.httpServer = httpServer;
-  import.meta.hot.dispose(() => {
-    io.disconnectSockets(true);
-  });
+  saveHotData(import.meta.hot, httpServer, io, app, () => io.disconnectSockets(true));
 }
