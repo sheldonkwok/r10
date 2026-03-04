@@ -1,6 +1,6 @@
-import type { GamePlayer } from "./types.ts";
+type PlayerLike = { hand: unknown[]; team: "red" | "black" | null };
 
-export function getLosingTeam(players: GamePlayer[]): "red" | "black" | null {
+export function getLosingTeam(players: PlayerLike[]): "red" | "black" | null {
   const withCards = players.filter((p) => p.hand.length > 0);
   if (withCards.length === 0) return null;
   const teams = new Set(withCards.map((p) => p.team));
@@ -8,7 +8,7 @@ export function getLosingTeam(players: GamePlayer[]): "red" | "black" | null {
 }
 
 export function getWinningTeam(
-  players: GamePlayer[],
+  players: (PlayerLike & { id: string })[],
   firstFinisherId: string | null,
 ): "red" | "black" | "wash" | null {
   const losingTeam = getLosingTeam(players);

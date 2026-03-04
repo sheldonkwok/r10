@@ -12,9 +12,9 @@ interface SocketMeta {
 }
 
 function sendGameStateToPlayers(io: IOServer, _roomId: string, game: Game) {
-  const state = game.getState();
+  const base = game.getState();
   for (const socketId of game.getSocketIds()) {
-    io.to(socketId).emit("game:state", state);
+    io.to(socketId).emit("game:state", game.getStateForSocket(socketId, base));
   }
 }
 
@@ -57,7 +57,7 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
         if (rejoined) {
           socketRooms.set(socket.id, { roomId });
           await socket.join(roomId);
-          socket.emit("game:state", existingGame.getState());
+          socket.emit("game:state", existingGame.getStateForSocket(socket.id));
           return;
         }
       }

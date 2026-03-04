@@ -10,8 +10,12 @@ import {
   play,
 } from "shared";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+type InternalPlayerInfo = Omit<GamePlayer, "handSize">;
+
 interface InternalPlayer {
-  info: GamePlayer;
+  info: InternalPlayerInfo;
   socketId: string | null; // null for bots
 }
 
@@ -62,7 +66,7 @@ export class Game {
         }
       : null;
 
-    const playerInfos = this.players.map((p) => p.info);
+    const playerInfos = this.toGamePlayers();
     return {
       roomId: this.roomId,
       players: playerInfos,
@@ -73,6 +77,21 @@ export class Game {
       firstFinisherId: this.firstFinisherId,
       winningTeam: getWinningTeam(playerInfos, this.firstFinisherId),
     };
+  }
+
+  getStateForSocket(socketId: string, base = this.getState()): GameState {
+    const gameOver = base.winningTeam !== null;
+    const players = base.players.map((player, index) => {
+      const internal = this.players[index];
+      if (internal.socketId === socketId) return player;
+      return {
+        ...player,
+        hand: [],
+        team: gameOver ? player.team : (null as null),
+      };
+    });
+    const debugState = isDev ? base : undefined;
+    return { ...base, players, debugState };
   }
 
   getSocketIds(): string[] {
@@ -162,6 +181,10 @@ export class Game {
     }
 
     return { success: true };
+  }
+
+  private toGamePlayers(): GamePlayer[] {
+    return this.players.map((p) => ({ ...p.info, handSize: p.info.hand.length }));
   }
 
   private advanceTurn(): void {

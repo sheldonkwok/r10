@@ -19,7 +19,8 @@ export interface GamePlayer {
   avatarUrl: string;
   isBot: boolean;
   hand: import("./card.ts").Card[];
-  team: "red" | "black";
+  handSize: number;
+  team: "red" | "black" | null;
 }
 
 export interface CurrentPlay {
@@ -37,6 +38,8 @@ export interface GameState {
   losingTeam: "red" | "black" | null;
   firstFinisherId: string | null;
   winningTeam: "red" | "black" | "wash" | null;
+  /** Dev only: full unstripped state for debug reveal toggle */
+  debugState?: GameState;
 }
 
 export interface ClientToServerEvents {

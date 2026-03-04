@@ -11,6 +11,7 @@ function makePlayer(id: string, team: "red" | "black", handSize: number): GamePl
     avatarUrl: "",
     isBot: false,
     hand,
+    handSize: hand.length,
     team,
   };
 }

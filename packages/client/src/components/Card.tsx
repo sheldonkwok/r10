@@ -17,26 +17,41 @@ const cardVariants = cva(
         true: "bg-yellow-100",
         false: "",
       },
+      faceDown: {
+        true: "bg-slate-700 border-slate-800",
+        false: "",
+      },
     },
     defaultVariants: {
       suit: "black",
       selectable: false,
       selected: false,
+      faceDown: false,
     },
   },
 );
 
 interface CardProps extends VariantProps<typeof cardVariants> {
-  rank: number;
-  suitEmoji: string;
+  rank?: number;
+  suitEmoji?: string;
   onClick?: () => void;
 }
 
-export function Card({ rank, suitEmoji, suit, selectable, selected, onClick }: CardProps) {
+export function Card({ rank, suitEmoji, suit, selectable, selected, faceDown, onClick }: CardProps) {
   return (
-    <button type="button" className={cardVariants({ suit, selectable, selected })} onClick={onClick}>
-      <span className="text-lg font-bold leading-none">{card.rankDisplay(rank)}</span>
-      <span className="text-xl leading-none">{suitEmoji}</span>
+    <button
+      type="button"
+      className={cardVariants({ suit, selectable, selected, faceDown })}
+      onClick={onClick}
+    >
+      {!faceDown && (
+        <>
+          <span className="text-lg font-bold leading-none">
+            {rank !== undefined ? card.rankDisplay(rank) : ""}
+          </span>
+          <span className="text-xl leading-none">{suitEmoji}</span>
+        </>
+      )}
     </button>
   );
 }

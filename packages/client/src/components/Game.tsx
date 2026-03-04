@@ -17,6 +17,7 @@ function suitVariant(card: { suit: { short: string } }): "red" | "black" {
 
 export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [revealAll, setRevealAll] = useState(false);
 
   const currentPlayerIndex = state.players.findIndex((p) => p.id === currentUserId);
   const currentPlayer = state.players[currentPlayerIndex];
@@ -79,6 +80,16 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
   const renderPlayerRow = (player: (typeof state.players)[number], playerIndex: number) => {
     const isCurrentUser = player.id === currentUserId;
     const isTheirTurn = state.currentTurn === playerIndex;
+    const debugPlayer =
+      !import.meta.env.PROD && revealAll ? state.debugState?.players[playerIndex] : undefined;
+    const displayPlayer = debugPlayer ?? player;
+    const showRealHand = isCurrentUser || !!debugPlayer;
+    const teamColor =
+      displayPlayer.team === "red"
+        ? "text-red-500"
+        : displayPlayer.team === "black"
+          ? "text-gray-800"
+          : "text-gray-400";
     return (
       <div
         key={player.id}
@@ -86,24 +97,30 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
       >
         <div className="player-info">
           <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
-          <span className={cn("player-name", player.team === "red" ? "text-red-500" : "text-gray-800")}>
+          <span className={cn("player-name", teamColor)}>
             {player.username}
+            {displayPlayer.team === null && " (?)"}
           </span>
           {isTheirTurn && <span className="turn-indicator">◀</span>}
-          {player.team === state.losingTeam && <span>Loser</span>}
+          {displayPlayer.team !== null && displayPlayer.team === state.losingTeam && <span>Loser</span>}
         </div>
         <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
-          {player.hand.map((card, i) => (
-            <Card
-              key={`${card.rank}-${card.suit.short}-${i}`}
-              rank={card.rank}
-              suitEmoji={card.suit.emoji}
-              suit={suitVariant(card)}
-              selectable={isCurrentUser && isMyTurn}
-              selected={isCurrentUser && selectedIndices.has(i)}
-              onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
-            />
-          ))}
+          {showRealHand
+            ? displayPlayer.hand.map((card, i) => (
+                <Card
+                  key={`${card.rank}-${card.suit.short}-${i}`}
+                  rank={card.rank}
+                  suitEmoji={card.suit.emoji}
+                  suit={suitVariant(card)}
+                  selectable={isCurrentUser && isMyTurn}
+                  selected={isCurrentUser && selectedIndices.has(i)}
+                  onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
+                />
+              ))
+            : Array.from({ length: player.handSize }, (_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: stable placeholder list
+                <Card key={i} faceDown />
+              ))}
         </div>
       </div>
     );
@@ -111,6 +128,11 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
 
   return (
     <div className="game">
+      {!import.meta.env.PROD && (
+        <Button variant="outline" size="sm" onClick={() => setRevealAll((v) => !v)}>
+          {revealAll ? "Hide" : "Reveal All"}
+        </Button>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <h1>Red 10</h1>
