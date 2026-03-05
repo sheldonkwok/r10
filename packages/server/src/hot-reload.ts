@@ -8,19 +8,23 @@ export function getOrCreateHttpServer(hot: ImportMeta["hot"]): HttpServer {
 }
 
 /**
- * Swaps the express app listener on the HTTP server.
- * On first boot, clears all listeners (including Socket.IO's upgrade listener).
- * On reloads, only removes the previous express app by reference to leave
- * Socket.IO's listeners intact and avoid MaxListenersExceededWarning.
+ * Swaps the express app on the HTTP server using a stable handler wrapper.
+ * On first boot, registers a single stable "request" listener that delegates
+ * to the current app via a shared ref. On hot reloads, only the ref is updated,
+ * so the listener stays in the same position relative to Socket.IO's listeners —
+ * preventing the double-response bug that occurs when listener order changes.
  */
 export function swapExpressApp(hot: ImportMeta["hot"], httpServer: HttpServer, app: Application): void {
-  if (hot?.data.expressApp) {
-    httpServer.removeListener("request", hot.data.expressApp as Application);
+  const appRef = hot?.data.appRef as { current: Application } | undefined;
+  if (appRef) {
+    appRef.current = app;
   } else {
     httpServer.removeAllListeners("request");
     httpServer.removeAllListeners("upgrade");
+    const ref = { current: app };
+    if (hot) hot.data.appRef = ref;
+    httpServer.on("request", (req, res) => ref.current(req, res));
   }
-  httpServer.on("request", app);
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: mirrors socket.io's own EventsMap constraint ({ [event: string]: any })
@@ -48,11 +52,9 @@ export function saveHotData(
   hot: NonNullable<ImportMeta["hot"]>,
   httpServer: HttpServer,
   io: Server,
-  app: Application,
   onDispose: () => void,
 ): void {
   hot.data.httpServer = httpServer;
   hot.data.io = io;
-  hot.data.expressApp = app;
   hot.dispose(onDispose);
 }

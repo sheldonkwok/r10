@@ -82,5 +82,5 @@ if (!httpServer.listening) {
 }
 
 if (import.meta.hot) {
-  saveHotData(import.meta.hot, httpServer, io, app, () => io.disconnectSockets(true));
+  saveHotData(import.meta.hot, httpServer, io, () => io.disconnectSockets(true));
 }
