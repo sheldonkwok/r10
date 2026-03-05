@@ -10,38 +10,38 @@ export const PLAYS = {
   bomb5: { name: "Five Card Bomb", rank: 3 },
   bomb6: { name: "Six Card Bomb", rank: 4 },
 
-  illegal: { name: "Illegal", rank: -1, value: -1 },
+  illegal: { name: "Illegal", rank: -1, value: -1, length: -1 },
 } as const;
 
 type PlayType = typeof PLAYS;
 type PlayName = keyof PlayType;
 type BasePlay = PlayType[PlayName];
-export type Play = BasePlay & { value: number };
+export type Play = BasePlay & { value: number; length: number };
 
 export function get(cards: card.Card[]): Play {
   const len = cards.length;
   const firstValue = cards[0]?.value;
 
   // Single
-  if (len === 1) return { ...PLAYS.single, value: firstValue };
+  if (len === 1) return { ...PLAYS.single, value: firstValue, length: 1 };
 
   const sameValue = allCardSameValue(cards);
 
   // Pair
-  if (len === 2 && sameValue) return { ...PLAYS.pair, value: firstValue };
+  if (len === 2 && sameValue) return { ...PLAYS.pair, value: firstValue, length: 2 };
 
   // Bombs
   if (isBombCount(len) && sameValue) {
-    return { ...PLAYS[`bomb${len}`], value: firstValue };
+    return { ...PLAYS[`bomb${len}`], value: firstValue, length: len };
   }
 
   // Straight
   if (isStraight(cards)) {
-    return { ...PLAYS.straight, value: highCardValue(cards) };
+    return { ...PLAYS.straight, value: highCardValue(cards), length: len };
   }
 
   // Dragon
-  if (isDragon(cards)) return { ...PLAYS.dragon, value: highCardValue(cards) };
+  if (isDragon(cards)) return { ...PLAYS.dragon, value: highCardValue(cards), length: len };
 
   return PLAYS.illegal;
 }

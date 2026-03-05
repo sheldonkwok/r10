@@ -10,7 +10,7 @@ const RANKS = card.CARD_RANKS;
 describe("single", () => {
   test("valid", () => {
     const fix = card.create(card.SUITS.Clubs, 2);
-    expect(play.get([fix])).toEqual({ ...PLAYS.single, value: 13 });
+    expect(play.get([fix])).toEqual({ ...PLAYS.single, value: 13, length: 1 });
   });
 });
 
@@ -46,28 +46,28 @@ describe("bomb", () => {
 describe("straight", () => {
   test("valid simple", () => {
     const fix = [3, 4, 5].map((num) => card.create(card.SUITS.Clubs, num));
-    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 3 });
+    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 3, length: 3 });
   });
 
   test("valid wrap 2", () => {
     const fix = [2, 3, 4].map((num) => card.create(card.SUITS.Clubs, num));
-    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 2 });
+    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 2, length: 3 });
   });
 
   test("valid ace low", () => {
     const fix = [RANKS.A, 2, 3].map((num) => card.create(card.SUITS.Clubs, num));
-    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 1 });
+    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 1, length: 3 });
   });
 
   test("valid ace high", () => {
     const fix = [RANKS.K, RANKS.Q, RANKS.A].map((num) => card.create(card.SUITS.Clubs, num));
-    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 12 });
+    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 12, length: 3 });
   });
 
   test("valid long", () => {
     const fix = [2, 3, 4, 5, 6, 7].map((num) => card.create(card.SUITS.Clubs, num));
 
-    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 5 });
+    expect(play.get(fix)).toEqual({ ...PLAYS.straight, value: 5, length: 6 });
   });
 
   test("invalid wrap ace", () => {
@@ -130,6 +130,25 @@ describe("dragon", () => {
       card.create(card.SUITS.Clubs, 5),
     ];
     expect(play.get(fix)).toMatchObject(PLAYS.illegal);
+  });
+});
+
+describe("straight compare", () => {
+  const straight3 = play.get([3, 4, 5].map((n) => card.create(card.SUITS.Clubs, n)));
+  const straight3High = play.get([5, 6, 7].map((n) => card.create(card.SUITS.Clubs, n)));
+  const straight4 = play.get([3, 4, 5, 6].map((n) => card.create(card.SUITS.Clubs, n)));
+
+  test("3-card straight cannot beat a 4-card straight", () => {
+    expect(compare(straight4, straight3High).valid).toBe(false);
+  });
+
+  test("4-card straight cannot beat a 3-card straight", () => {
+    expect(compare(straight3, straight4).valid).toBe(false);
+  });
+
+  test("4-card straight with higher value beats another 4-card straight", () => {
+    const straight4High = play.get([5, 6, 7, 8].map((n) => card.create(card.SUITS.Clubs, n)));
+    expect(compare(straight4, straight4High).valid).toBe(true);
   });
 });
 
