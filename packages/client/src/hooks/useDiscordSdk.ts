@@ -32,16 +32,21 @@ export function useDiscordSdk(): UseDiscordSdkResult {
       // Mock mode for browser development
       if (!import.meta.env.PROD) {
         if (cancelled) return;
+        let mockUserId = localStorage.getItem("dev:mockUserId");
+        if (!mockUserId) {
+          mockUserId = `mock-${Math.random().toString(36).slice(2, 8)}`;
+          localStorage.setItem("dev:mockUserId", mockUserId);
+        }
+        const suffix = mockUserId.slice(-4);
         setAuth({
-          accessToken: "mock-token",
+          accessToken: `mock-token:${mockUserId}`,
           user: {
-            id: "mock-user-1",
-            username: "DevUser",
+            id: mockUserId,
+            username: `Dev-${suffix}`,
             avatar: null,
-            global_name: "Developer",
+            global_name: `Dev-${suffix}`,
           },
         });
-        // Create a minimal mock SDK
         setSdk({ channelId: "mock-room" } as DiscordSDKType);
         return;
       }

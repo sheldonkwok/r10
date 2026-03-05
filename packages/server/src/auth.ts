@@ -37,13 +37,15 @@ export async function exchangeToken(code: string): Promise<string> {
 }
 
 export async function getDiscordUser(token: string): Promise<DiscordUser> {
-  if (process.env.NODE_ENV !== "production" && token === "mock-token") {
+  if (process.env.NODE_ENV !== "production" && token.startsWith("mock-token:")) {
+    const userId = token.slice("mock-token:".length);
+    const suffix = userId.slice(-4);
     return {
-      id: "mock-user-1",
-      username: "DevUser",
+      id: userId,
+      username: `Dev-${suffix}`,
       avatar: null,
       discriminator: "0",
-      global_name: "Developer",
+      global_name: `Dev-${suffix}`,
     };
   }
 
