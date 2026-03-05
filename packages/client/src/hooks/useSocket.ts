@@ -11,6 +11,7 @@ interface UseSocketResult {
   startGame: () => void;
   playCards: (cardIndices: number[]) => void;
   pass: () => void;
+  resetGame: () => void;
   error: string | null;
 }
 
@@ -43,6 +44,11 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
       setGameState(state);
     });
 
+    socket.on("lobby:reset", (state) => {
+      setGameState(null);
+      setLobbyState(state);
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
@@ -65,6 +71,10 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
     socketRef.current?.emit("game:pass");
   }, []);
 
+  const resetGame = useCallback(() => {
+    socketRef.current?.emit("game:reset");
+  }, []);
+
   return {
     lobbyState,
     gameState,
@@ -72,6 +82,7 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
     startGame,
     playCards,
     pass,
+    resetGame,
     error,
   };
 }

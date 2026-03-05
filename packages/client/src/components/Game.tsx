@@ -9,13 +9,14 @@ interface GameProps {
   currentUserId: string;
   onPlayCards: (cardIndices: number[]) => void;
   onPass: () => void;
+  onResetGame: () => void;
 }
 
 function suitVariant(card: { suit: { short: string } }): "red" | "black" {
   return card.suit.short === "h" || card.suit.short === "d" ? "red" : "black";
 }
 
-export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
+export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }: GameProps) {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [revealAll, setRevealAll] = useState(false);
 
@@ -188,6 +189,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass }: GameProps) {
               )}
               <span>First out: {state.players.find((p) => p.id === state.firstFinisherId)?.username}</span>
               <span>Losing team: {state.losingTeam}</span>
+              {state.hostId === currentUserId && <Button onClick={onResetGame}>Restart Game</Button>}
             </div>
           )}
 

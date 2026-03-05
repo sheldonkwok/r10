@@ -31,6 +31,7 @@ export interface CurrentPlay {
 
 export interface GameState {
   roomId: string;
+  hostId: string;
   players: GamePlayer[];
   currentTurn: number;
   currentPlay: CurrentPlay | null;
@@ -49,10 +50,12 @@ export interface ClientToServerEvents {
   "lobby:leave": () => void;
   "game:play": (data: { cardIndices: number[] }) => void;
   "game:pass": () => void;
+  "game:reset": () => void;
 }
 
 export interface ServerToClientEvents {
   "lobby:state": (state: LobbyState) => void;
   "lobby:error": (message: string) => void;
+  "lobby:reset": (state: LobbyState) => void;
   "game:state": (state: GameState) => void;
 }

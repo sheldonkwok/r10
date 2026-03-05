@@ -1,7 +1,7 @@
 import type { ClientToServerEvents, ServerToClientEvents } from "shared";
 import type { Server, Socket } from "socket.io";
 import { avatarUrl, getDiscordUser } from "./auth.ts";
-import { createGame, type Game, getGame } from "./game.ts";
+import { createGame, type Game, getGame, removeGame } from "./game.ts";
 import { getOrCreateLobby, removeLobbyIfEmpty } from "./lobby.ts";
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -29,6 +29,7 @@ async function processBotTurns(io: IOServer, roomId: string, game: Game) {
   while (game.isCurrentPlayerBot() && safety < maxIterations) {
     safety++;
     await sleep(100);
+    if (getGame(roomId) !== game) break; // game was removed (reset) or replaced
     try {
       game.makeBotPlay();
       sendGameStateToPlayers(io, roomId, game);
@@ -155,6 +156,21 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
 
     sendGameStateToPlayers(io, meta.roomId, game);
     processBotTurns(io, meta.roomId, game);
+  });
+
+  socket.on("game:reset", () => {
+    const meta = socketRooms.get(socket.id);
+    if (!meta) return;
+
+    const game = getGame(meta.roomId);
+    if (!game || game.getState().winningTeam === null) return;
+
+    const lobby = getOrCreateLobby(meta.roomId);
+    if (!lobby.isHost(socket.id)) return;
+
+    removeGame(meta.roomId);
+    lobby.resetForNewGame();
+    io.to(meta.roomId).emit("lobby:reset", lobby.getState());
   });
 
   socket.on("lobby:leave", () => {

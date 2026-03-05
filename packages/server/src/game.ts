@@ -27,6 +27,7 @@ interface InternalPlay {
 
 export class Game {
   readonly roomId: string;
+  private hostId: string;
   private players: InternalPlayer[] = [];
   private currentTurn: number = 0;
   private currentPlayInternal: InternalPlay | null = null;
@@ -35,6 +36,7 @@ export class Game {
 
   constructor(roomId: string, lobbyPlayers: [string, LobbyPlayer][]) {
     this.roomId = roomId;
+    this.hostId = lobbyPlayers.find(([, p]) => p.isHost)?.[1].id ?? "";
     const hands = card.createHands();
 
     this.players = lobbyPlayers.map(([socketId, player], index) => ({
@@ -69,6 +71,7 @@ export class Game {
     const playerInfos = this.toGamePlayers();
     return {
       roomId: this.roomId,
+      hostId: this.hostId,
       players: playerInfos,
       currentTurn: this.currentTurn,
       currentPlay,

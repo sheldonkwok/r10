@@ -14,6 +14,7 @@ export function App() {
     startGame,
     playCards,
     pass,
+    resetGame,
     error: socketError,
   } = useSocket(roomId, token);
 
@@ -28,7 +29,15 @@ export function App() {
   }
 
   if (gameState) {
-    return <Game state={gameState} currentUserId={auth.user.id} onPlayCards={playCards} onPass={pass} />;
+    return (
+      <Game
+        state={gameState}
+        currentUserId={auth.user.id}
+        onPlayCards={playCards}
+        onPass={pass}
+        onResetGame={resetGame}
+      />
+    );
   }
 
   if (!lobbyState) {

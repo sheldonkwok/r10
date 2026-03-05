@@ -83,6 +83,16 @@ export class Lobby {
     }
   }
 
+  resetForNewGame(): void {
+    for (const [socketId, player] of this.players) {
+      if (player.isBot) {
+        this.players.delete(socketId);
+      } else {
+        player.ready = false;
+      }
+    }
+  }
+
   isEmpty(): boolean {
     return this.players.size === 0;
   }
