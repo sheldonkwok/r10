@@ -1,4 +1,4 @@
-import * as play from "./play";
+import * as play from "./play.ts";
 
 interface Compare {
   valid: boolean;

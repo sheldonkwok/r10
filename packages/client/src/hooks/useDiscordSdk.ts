@@ -29,8 +29,9 @@ export function useDiscordSdk(): UseDiscordSdkResult {
     let cancelled = false;
 
     async function init() {
-      // Mock mode for browser development
-      if (!import.meta.env.PROD) {
+      // Mock mode when not running inside a Discord iframe
+      const inDiscord = new URLSearchParams(window.location.search).has("frame_id");
+      if (!inDiscord) {
         if (cancelled) return;
         let mockUserId = localStorage.getItem("dev:mockUserId");
         if (!mockUserId) {

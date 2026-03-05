@@ -1,4 +1,4 @@
-import * as card from "./card";
+import * as card from "./card.ts";
 
 export const PLAYS = {
   single: { name: "Single", rank: 0 },

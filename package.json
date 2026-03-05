@@ -6,6 +6,7 @@
     "dev": "pnpm --filter server dev",
     "build": "pnpm --filter client build",
     "test": "pnpm --filter shared test",
+    "start": "node --experimental-strip-types packages/server/src/index.ts",
     "check": "pnpm -r exec tsc --noEmit && biome check --write --error-on-warnings . && pnpm test"
   },
   "devDependencies": {
