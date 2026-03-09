@@ -121,6 +121,27 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     const game = getGame(meta.roomId);
     if (!game) return;
 
+    if (game.getChaGoPhase() !== null) {
+      if (!game.isChaGoEligible(socket.id)) {
+        socket.emit("lobby:error", "Not eligible to play in cha-go");
+        return;
+      }
+      const result = game.makeChaGoPlay(socket.id, cardIndices);
+      if (!result.success) {
+        socket.emit("lobby:error", result.error ?? "Invalid cha-go play");
+        return;
+      }
+      if (game.getChaGoPhase() !== null) {
+        game.startChaGoTimer(() => {
+          sendGameStateToPlayers(io, meta.roomId, game);
+          processBotTurns(io, meta.roomId, game);
+        });
+      }
+      sendGameStateToPlayers(io, meta.roomId, game);
+      processBotTurns(io, meta.roomId, game);
+      return;
+    }
+
     if (!game.isPlayerTurn(socket.id)) {
       socket.emit("lobby:error", "Not your turn");
       return;
@@ -130,6 +151,13 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     if (!result.success) {
       socket.emit("lobby:error", result.error ?? "Invalid play");
       return;
+    }
+
+    if (game.getChaGoPhase() !== null) {
+      game.startChaGoTimer(() => {
+        sendGameStateToPlayers(io, meta.roomId, game);
+        processBotTurns(io, meta.roomId, game);
+      });
     }
 
     sendGameStateToPlayers(io, meta.roomId, game);
@@ -142,6 +170,11 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
 
     const game = getGame(meta.roomId);
     if (!game) return;
+
+    if (game.getChaGoPhase() !== null) {
+      socket.emit("lobby:error", "Cannot pass during cha-go");
+      return;
+    }
 
     if (!game.isPlayerTurn(socket.id)) {
       socket.emit("lobby:error", "Not your turn");

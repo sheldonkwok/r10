@@ -19,17 +19,37 @@ function suitVariant(card: { suit: { short: string } }): "red" | "black" {
 export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }: GameProps) {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [revealAll, setRevealAll] = useState(false);
+  const [chaGoTimeLeft, setChaGoTimeLeft] = useState<number | null>(null);
 
   const currentPlayerIndex = state.players.findIndex((p) => p.id === currentUserId);
   const currentPlayer = state.players[currentPlayerIndex];
   const isMyTurn = state.currentTurn === currentPlayerIndex;
   const turnPlayer = state.players[state.currentTurn];
 
+  const chaGoPhase = state.chaGoPhase ?? null;
+  const isEligibleForChaGo = chaGoPhase !== null && state.lastPlayerId !== currentUserId;
+  const canInteract = isMyTurn || isEligibleForChaGo;
+
   // Clear selection when turn changes or after playing
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional triggers, not read inside
   useEffect(() => {
     setSelectedIndices(new Set());
   }, [state.currentTurn, state.currentPlay]);
+
+  useEffect(() => {
+    const deadline = state.chaGoDeadline;
+    if (!deadline) {
+      setChaGoTimeLeft(null);
+      return;
+    }
+    const update = () => {
+      const left = Math.max(0, deadline - Date.now());
+      setChaGoTimeLeft(left);
+    };
+    update();
+    const interval = setInterval(update, 100);
+    return () => clearInterval(interval);
+  }, [state.chaGoDeadline]);
 
   const toggleCard = (index: number) => {
     setSelectedIndices((prev) => {
@@ -58,6 +78,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   }, [selectedCards]);
 
   const isValidPlay = useMemo(() => {
+    if (chaGoPhase !== null) return false;
     if (!selectedPlay || selectedPlay.name === "Illegal") return false;
 
     // If there's a current play to beat and it's not our own play
@@ -68,12 +89,24 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     }
 
     return true;
-  }, [selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
+  }, [chaGoPhase, selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
+
+  const isValidChaGoPlay = useMemo(() => {
+    if (!chaGoPhase || !selectedPlay || !state.currentPlay) return false;
+    if (state.lastPlayerId === currentUserId) return false;
+    const currentPlayObj = play.get(state.currentPlay.cards);
+    if (chaGoPhase === "cha-available") {
+      return selectedPlay.name === "Pair" && selectedPlay.value === currentPlayObj.value;
+    }
+    return selectedPlay.name === "Single" && selectedPlay.value === currentPlayObj.value;
+  }, [chaGoPhase, selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
 
   const canPass = state.currentPlay !== null && state.lastPlayerId !== currentUserId;
 
   const handlePlay = () => {
-    if (!isValidPlay || !isMyTurn) return;
+    const validNormal = isValidPlay && isMyTurn && chaGoPhase === null;
+    const validChaGo = isValidChaGoPlay && isEligibleForChaGo;
+    if (!validNormal && !validChaGo) return;
     const indices = [...selectedIndices].sort((a, b) => a - b);
     onPlayCards(indices);
   };
@@ -113,9 +146,9 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
                   rank={card.rank}
                   suitEmoji={card.suit.emoji}
                   suit={suitVariant(card)}
-                  selectable={isCurrentUser && isMyTurn}
+                  selectable={isCurrentUser && canInteract}
                   selected={isCurrentUser && selectedIndices.has(i)}
-                  onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
+                  onClick={isCurrentUser && canInteract ? () => toggleCard(i) : undefined}
                 />
               ))
             : Array.from({ length: player.handSize }, (_, i) => (
@@ -139,7 +172,17 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
           <h1>Red 10</h1>
 
           <div className="turn-info">
-            {isMyTurn ? <strong>Your turn!</strong> : <span>Waiting for {turnPlayer?.username}...</span>}
+            {chaGoPhase !== null ? (
+              isEligibleForChaGo ? (
+                <strong>{chaGoPhase === "cha-available" ? "You can CHA!" : "You can GO!"}</strong>
+              ) : (
+                <span>Waiting for CHA/GO...</span>
+              )
+            ) : isMyTurn ? (
+              <strong>Your turn!</strong>
+            ) : (
+              <span>Waiting for {turnPlayer?.username}...</span>
+            )}
           </div>
 
           {state.currentPlay && (
@@ -157,7 +200,14 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
             </div>
           )}
 
-          {currentPlayer && isMyTurn && state.winningTeam === null && (
+          {chaGoPhase && (
+            <div className="cha-go-indicator">
+              <strong>{chaGoPhase === "cha-available" ? "CHA available!" : "GO available!"}</strong>
+              {chaGoTimeLeft !== null && <span> ({(chaGoTimeLeft / 1000).toFixed(1)}s)</span>}
+            </div>
+          )}
+
+          {currentPlayer && canInteract && state.winningTeam === null && (
             <div className="play-area">
               <div className="selection-info">
                 {selectedCards.length === 0 ? (
@@ -168,10 +218,14 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
                   </span>
                 )}
               </div>
-              <Button onClick={handlePlay} disabled={!isValidPlay}>
-                Play {selectedPlay?.name ?? ""}
+              <Button onClick={handlePlay} disabled={chaGoPhase === null ? !isValidPlay : !isValidChaGoPlay}>
+                {chaGoPhase === "cha-available"
+                  ? "CHA"
+                  : chaGoPhase === "go-available"
+                    ? "GO"
+                    : `Play ${selectedPlay?.name ?? ""}`}
               </Button>
-              <Button onClick={onPass} disabled={!canPass}>
+              <Button onClick={onPass} disabled={!canPass || chaGoPhase !== null}>
                 Pass
               </Button>
               <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>

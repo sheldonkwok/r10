@@ -39,6 +39,8 @@ export interface GameState {
   losingTeam: "red" | "black" | null;
   firstFinisherId: string | null;
   winningTeam: "red" | "black" | "wash" | null;
+  chaGoPhase: "cha-available" | "go-available" | null;
+  chaGoDeadline: number | null;
   /** Dev only: full unstripped state for debug reveal toggle */
   debugState?: GameState;
 }
