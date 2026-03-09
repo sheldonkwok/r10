@@ -1,3 +1,6 @@
+# Game Rules
+Refer to @game-rules.md to understand the game.
+
 # Technology
 Use pnpm for package management instead of npm
 

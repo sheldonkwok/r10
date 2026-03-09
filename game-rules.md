@@ -53,10 +53,12 @@ Bombs are defined as:
 Cha-Go is a special sequence that can only be initiated when the round begins with a **Single** card.
 
 * If the round begins with a **Single**, you can **CHA a pair of the same cards** (and skip others before you).
-* If someone else CHA's, you may **GO** on top of that with a higher single card.
+* If someone else CHA's, you may **GO** on top of that with a single card of the same number.
 * Cha-Go only follows: $1\rightarrow2\rightarrow1\rightarrow2~OR~1\rightarrow2\rightarrow3$.
-* You can not Cha on a pair.
 * Once a Cha-Go is instituted, no one else can bomb on top of it.
+* If no one is capable of GO after a CHA, the player who played the CHA can start a new sequence.
+* If no one is capable of CHA after a GO, the player who played the GO can start a new sequence.
+
 
 ---
 

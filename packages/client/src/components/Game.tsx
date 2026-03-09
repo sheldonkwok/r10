@@ -25,6 +25,18 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   const isMyTurn = state.currentTurn === currentPlayerIndex;
   const turnPlayer = state.players[state.currentTurn];
 
+  const chaGoPhase = state.chaGoPhase ?? null;
+  const isEligibleForChaGo = useMemo(() => {
+    if (chaGoPhase === null) return false;
+    if (state.lastPlayerId === currentUserId) return false;
+    if (!currentPlayer || !state.currentPlay) return false;
+    const currentPlayObj = play.get(state.currentPlay.cards);
+    const matchingCards = currentPlayer.hand.filter((c) => c.value === currentPlayObj.value);
+    if (chaGoPhase === "cha-available") return matchingCards.length >= 2;
+    return matchingCards.length >= 1;
+  }, [chaGoPhase, state.lastPlayerId, currentUserId, currentPlayer, state.currentPlay]);
+  const canInteract = isMyTurn || isEligibleForChaGo;
+
   // Clear selection when turn changes or after playing
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional triggers, not read inside
   useEffect(() => {
@@ -59,6 +71,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
 
   const isValidPlay = useMemo(() => {
     if (!selectedPlay || selectedPlay.name === "Illegal") return false;
+    if (state.chaGoLocked) return false;
 
     // If there's a current play to beat and it's not our own play
     if (state.currentPlay && state.lastPlayerId !== currentUserId) {
@@ -68,12 +81,24 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     }
 
     return true;
-  }, [selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
+  }, [selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId, state.chaGoLocked]);
+
+  const isValidChaGoPlay = useMemo(() => {
+    if (!chaGoPhase || !selectedPlay || !state.currentPlay) return false;
+    if (state.lastPlayerId === currentUserId) return false;
+    const currentPlayObj = play.get(state.currentPlay.cards);
+    if (chaGoPhase === "cha-available") {
+      return selectedPlay.name === "Pair" && selectedPlay.value === currentPlayObj.value;
+    }
+    return selectedPlay.name === "Single" && selectedPlay.value === currentPlayObj.value;
+  }, [chaGoPhase, selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
 
   const canPass = state.currentPlay !== null && state.lastPlayerId !== currentUserId;
 
   const handlePlay = () => {
-    if (!isValidPlay || !isMyTurn) return;
+    const validNormal = isValidPlay && isMyTurn;
+    const validChaGo = isValidChaGoPlay && isEligibleForChaGo;
+    if (!validNormal && !validChaGo) return;
     const indices = [...selectedIndices].sort((a, b) => a - b);
     onPlayCards(indices);
   };
@@ -113,9 +138,9 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
                   rank={card.rank}
                   suitEmoji={card.suit.emoji}
                   suit={suitVariant(card)}
-                  selectable={isCurrentUser && isMyTurn}
+                  selectable={isCurrentUser && canInteract}
                   selected={isCurrentUser && selectedIndices.has(i)}
-                  onClick={isCurrentUser && isMyTurn ? () => toggleCard(i) : undefined}
+                  onClick={isCurrentUser && canInteract ? () => toggleCard(i) : undefined}
                 />
               ))
             : Array.from({ length: player.handSize }, (_, i) => (
@@ -140,6 +165,9 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
 
           <div className="turn-info">
             {isMyTurn ? <strong>Your turn!</strong> : <span>Waiting for {turnPlayer?.username}...</span>}
+            {isEligibleForChaGo && (
+              <strong>{chaGoPhase === "cha-available" ? "You can CHA!" : "You can GO!"}</strong>
+            )}
           </div>
 
           {state.currentPlay && (
@@ -157,7 +185,13 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
             </div>
           )}
 
-          {currentPlayer && isMyTurn && state.winningTeam === null && (
+          {chaGoPhase && isEligibleForChaGo && (
+            <div className="cha-go-indicator">
+              <strong>{chaGoPhase === "cha-available" ? "CHA available!" : "GO available!"}</strong>
+            </div>
+          )}
+
+          {currentPlayer && canInteract && state.winningTeam === null && (
             <div className="play-area">
               <div className="selection-info">
                 {selectedCards.length === 0 ? (
@@ -168,12 +202,21 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
                   </span>
                 )}
               </div>
-              <Button onClick={handlePlay} disabled={!isValidPlay}>
-                Play {selectedPlay?.name ?? ""}
+              <Button
+                onClick={handlePlay}
+                disabled={!(isValidPlay && isMyTurn) && !(isValidChaGoPlay && isEligibleForChaGo)}
+              >
+                {isValidChaGoPlay && isEligibleForChaGo
+                  ? chaGoPhase === "cha-available"
+                    ? "CHA"
+                    : "GO"
+                  : `Play ${selectedPlay?.name ?? ""}`}
               </Button>
-              <Button onClick={onPass} disabled={!canPass}>
-                Pass
-              </Button>
+              {isMyTurn && (
+                <Button onClick={onPass} disabled={!canPass}>
+                  Pass
+                </Button>
+              )}
               <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
                 Clear
               </Button>

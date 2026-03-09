@@ -33,11 +33,13 @@ export class Game {
   private currentPlayInternal: InternalPlay | null = null;
   private lastPlayerId: string | null = null;
   private firstFinisherId: string | null = null;
+  private chaGoPhase: "cha-available" | "go-available" | null = null;
+  private chaGoLocked: boolean = false;
 
-  constructor(roomId: string, lobbyPlayers: [string, LobbyPlayer][]) {
+  constructor(roomId: string, lobbyPlayers: [string, LobbyPlayer][], dealtHands?: card.Cards[]) {
     this.roomId = roomId;
     this.hostId = lobbyPlayers.find(([, p]) => p.isHost)?.[1].id ?? "";
-    const hands = card.createHands();
+    const hands = dealtHands ?? card.createHands();
 
     this.players = lobbyPlayers.map(([socketId, player], index) => ({
       info: {
@@ -79,6 +81,8 @@ export class Game {
       losingTeam: getLosingTeam(playerInfos),
       firstFinisherId: this.firstFinisherId,
       winningTeam: getWinningTeam(playerInfos, this.firstFinisherId),
+      chaGoPhase: this.chaGoPhase,
+      chaGoLocked: this.chaGoLocked,
     };
   }
 
@@ -122,6 +126,14 @@ export class Game {
       return { success: false, error: "Game is over" };
     }
 
+    if (this.chaGoLocked) {
+      return { success: false, error: "Cha-Go is locked — same-rank only" };
+    }
+
+    if (this.chaGoPhase !== null) {
+      this.chaGoPhase = null;
+    }
+
     const player = this.getCurrentPlayer();
     const cards = cardIndices.map((i) => player.info.hand[i]);
     const newPlay = play.get(cards);
@@ -157,9 +169,92 @@ export class Game {
       }
       this.currentPlayInternal = null;
       this.lastPlayerId = null;
+    } else if (newPlay.name === "Single") {
+      this.chaGoPhase = "cha-available";
+      if (this.getEligibleChaGoPlayerIds().length === 0) {
+        this.chaGoPhase = null;
+      }
     }
 
     return { success: true };
+  }
+
+  getChaGoPhase(): "cha-available" | "go-available" | null {
+    return this.chaGoPhase;
+  }
+
+  private getEligibleChaGoPlayerIds(): string[] {
+    if (!this.chaGoPhase || !this.currentPlayInternal) return [];
+    const value = this.currentPlayInternal.play.value;
+    const minMatching = this.chaGoPhase === "cha-available" ? 2 : 1;
+    return this.players
+      .filter(
+        (p) =>
+          p.info.id !== this.lastPlayerId &&
+          p.info.hand.length > 0 &&
+          p.info.hand.filter((c) => c.value === value).length >= minMatching,
+      )
+      .map((p) => p.info.id);
+  }
+
+  isChaGoEligible(socketId: string): boolean {
+    if (this.chaGoPhase === null) return false;
+    const player = this.players.find((p) => p.socketId === socketId);
+    if (!player) return false;
+    return this.getEligibleChaGoPlayerIds().includes(player.info.id);
+  }
+
+  makeChaGoPlay(socketId: string, cardIndices: number[]): { executed: boolean } {
+    if (this.chaGoPhase === null) return { executed: false };
+    if (!this.currentPlayInternal) return { executed: false };
+
+    const playerEntry = this.players.find((p) => p.socketId === socketId);
+    if (!playerEntry) return { executed: false };
+    if (playerEntry.info.id === this.lastPlayerId) return { executed: false };
+
+    const cards = cardIndices.map((i) => playerEntry.info.hand[i]);
+    if (cards.some((c) => c === undefined)) return { executed: false };
+    const newPlay = play.get(cards);
+    const currentValue = this.currentPlayInternal.play.value;
+
+    if (this.chaGoPhase === "cha-available") {
+      if (newPlay.name !== "Pair" || newPlay.value !== currentValue) {
+        return { executed: false };
+      }
+    } else {
+      if (newPlay.name !== "Single" || newPlay.value !== currentValue) {
+        return { executed: false };
+      }
+    }
+
+    const sortedIndices = [...cardIndices].sort((a, b) => b - a);
+    for (const idx of sortedIndices) {
+      playerEntry.info.hand.splice(idx, 1);
+    }
+
+    this.currentPlayInternal = { playerId: playerEntry.info.id, cards, play: newPlay };
+    this.lastPlayerId = playerEntry.info.id;
+
+    const playerIdx = this.players.findIndex((p) => p.info.id === playerEntry.info.id);
+    if (playerIdx !== -1) {
+      this.currentTurn = playerIdx;
+      this.advanceTurn();
+    }
+
+    if (playerEntry.info.hand.length === 0) {
+      if (this.firstFinisherId === null) {
+        this.firstFinisherId = playerEntry.info.id;
+      }
+      this.currentPlayInternal = null;
+      this.lastPlayerId = null;
+      this.chaGoPhase = null;
+      this.chaGoLocked = false;
+    } else {
+      this.chaGoPhase = this.chaGoPhase === "cha-available" ? "go-available" : "cha-available";
+      this.chaGoLocked = true;
+    }
+
+    return { executed: true };
   }
 
   pass(): { success: boolean; error?: string } {
@@ -181,6 +276,8 @@ export class Game {
     // Check if we've gone full circle back to the last player
     if (this.players[this.currentTurn].info.id === this.lastPlayerId) {
       this.currentPlayInternal = null;
+      this.chaGoPhase = null;
+      this.chaGoLocked = false;
     }
 
     return { success: true };
@@ -209,6 +306,11 @@ export class Game {
 
     if (hand.length === 0) {
       this.advanceTurn();
+      return;
+    }
+
+    if (this.chaGoLocked) {
+      this.pass();
       return;
     }
 
