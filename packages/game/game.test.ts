@@ -1,7 +1,7 @@
-import type { LobbyPlayer } from "game";
-import { card } from "game";
 import { beforeEach, describe, expect, it } from "vitest";
+import * as card from "./card.ts";
 import { Game } from "./game.ts";
+import type { LobbyPlayer } from "./types.ts";
 
 const { SUITS, create } = card;
 

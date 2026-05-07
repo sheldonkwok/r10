@@ -14,11 +14,14 @@ interface SocketMeta {
 
 const socketRooms = new Map<string, SocketMeta>();
 
+const isDev = process.env.NODE_ENV !== "production";
+
 function sendGameStateToPlayers(io: IOServer, roomId: string, game: Game) {
   const base = game.getState();
   for (const [socketId, meta] of socketRooms) {
     if (meta.roomId !== roomId) continue;
-    io.to(socketId).emit("game:state", game.getStateForPlayer(meta.playerId, base));
+    const filtered = game.getStateForPlayer(meta.playerId, base);
+    io.to(socketId).emit("game:state", isDev ? { ...filtered, debugState: base } : filtered);
   }
 }
 
