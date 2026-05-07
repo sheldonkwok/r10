@@ -1,4 +1,4 @@
-import type { ClientToServerEvents, ServerToClientEvents } from "shared";
+import type { ClientToServerEvents, ServerToClientEvents } from "game";
 import type { Server, Socket } from "socket.io";
 import { avatarUrl, getDiscordUser } from "./auth.ts";
 import { createGame, type Game, getGame, removeGame } from "./game.ts";

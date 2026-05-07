@@ -1,5 +1,5 @@
+import { compare, type GameState, play } from "game";
 import { useEffect, useMemo, useState } from "react";
-import { compare, type GameState, play } from "shared";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card } from "./Card.tsx";

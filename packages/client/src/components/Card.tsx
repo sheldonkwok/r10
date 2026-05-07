@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { card } from "shared";
+import { card } from "game";
 
 const cardVariants = cva(
   "flex flex-col items-center justify-center gap-1 border-2 rounded-lg bg-white select-none w-14 h-20 p-0",

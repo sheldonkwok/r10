@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
-import type { ClientToServerEvents, ServerToClientEvents } from "shared";
+import type { ClientToServerEvents, ServerToClientEvents } from "game";
 import { exchangeToken } from "./auth.ts";
 import {
   getOrCreateHttpServer,

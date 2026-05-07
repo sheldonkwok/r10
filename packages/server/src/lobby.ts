@@ -1,4 +1,4 @@
-import type { LobbyPlayer, LobbyState } from "shared";
+import type { LobbyPlayer, LobbyState } from "game";
 
 const MAX_PLAYERS = 6;
 

@@ -1,5 +1,5 @@
+import type { ClientToServerEvents, GameState, LobbyState, ServerToClientEvents } from "game";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClientToServerEvents, GameState, LobbyState, ServerToClientEvents } from "shared";
 import { io, type Socket } from "socket.io-client";
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;

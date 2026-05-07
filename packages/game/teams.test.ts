@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as card from "./card.ts";
-import { getLosingTeam, getWinningTeam } from "./game.ts";
+import { getLosingTeam, getWinningTeam } from "./teams.ts";
 import type { GamePlayer } from "./types.ts";
 
 function makePlayer(id: string, team: "red" | "black", handSize: number): GamePlayer {

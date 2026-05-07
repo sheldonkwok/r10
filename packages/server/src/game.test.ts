@@ -1,5 +1,5 @@
-import type { LobbyPlayer } from "shared";
-import { card } from "shared";
+import type { LobbyPlayer } from "game";
+import { card } from "game";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Game } from "./game.ts";
 

@@ -1,4 +1,4 @@
-import type { LobbyState } from "shared";
+import type { LobbyState } from "game";
 import { Button } from "@/components/ui/button";
 import { PlayerSlot } from "./PlayerSlot.tsx";
 

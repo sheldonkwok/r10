@@ -3,7 +3,7 @@
   "compilerOptions": {
     "types": ["vite/client"],
     "paths": {
-      "shared": ["../shared/index.ts"],
+      "game": ["../game/index.ts"],
       "@/*": ["./src/*"]
     }
   },

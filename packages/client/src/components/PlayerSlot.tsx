@@ -1,4 +1,4 @@
-import type { LobbyPlayer } from "shared";
+import type { LobbyPlayer } from "game";
 
 interface PlayerSlotProps {
   player: LobbyPlayer | null;

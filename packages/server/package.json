@@ -10,7 +10,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "shared": "workspace:*",
+    "game": "workspace:*",
     "socket.io": "^4.8.0"
   },
   "devDependencies": {

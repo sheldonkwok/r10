@@ -8,7 +8,7 @@ import {
   getWinningTeam,
   type LobbyPlayer,
   play,
-} from "shared";
+} from "game";
 
 const isDev = process.env.NODE_ENV !== "production";
 
