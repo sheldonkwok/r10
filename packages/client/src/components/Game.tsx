@@ -2,13 +2,29 @@ import {
   canPlay,
   chaGoEligibility,
   isValidChaGoPlay as checkValidChaGoPlay,
+  type GamePlayer,
   type GameState,
   play,
 } from "game";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { useStageScale } from "@/hooks/useStageScale.ts";
 import { Card } from "./Card.tsx";
+import { FeltTable } from "./pixel/FeltTable.tsx";
+import { PixelButton } from "./pixel/PixelButton.tsx";
+import { PixelPanel } from "./pixel/PixelPanel.tsx";
+
+const STAGE_W = 1280;
+const STAGE_H = 800;
+
+const OPPONENT_POSITIONS: Array<{ x: number; y: number }> = [
+  { x: 110, y: 380 },
+  { x: 360, y: 130 },
+  { x: 640, y: 100 },
+  { x: 920, y: 130 },
+  { x: 1170, y: 380 },
+];
+
+type SuitShort = "h" | "d" | "c" | "s";
 
 interface GameProps {
   state: GameState;
@@ -18,13 +34,10 @@ interface GameProps {
   onResetGame: () => void;
 }
 
-function suitVariant(card: { suit: { short: string } }): "red" | "black" {
-  return card.suit.short === "h" || card.suit.short === "d" ? "red" : "black";
-}
-
 export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }: GameProps) {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [revealAll, setRevealAll] = useState(false);
+  const scale = useStageScale(STAGE_W, STAGE_H);
 
   const currentPlayerIndex = state.players.findIndex((p) => p.id === currentUserId);
   const currentPlayer = state.players[currentPlayerIndex];
@@ -38,7 +51,6 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   );
   const canInteract = isMyTurn || isEligibleForChaGo;
 
-  // Clear selection when turn changes or after playing
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional triggers, not read inside
   useEffect(() => {
     setSelectedIndices(new Set());
@@ -47,11 +59,8 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   const toggleCard = (index: number) => {
     setSelectedIndices((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
       return next;
     });
   };
@@ -90,149 +99,542 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     onPlayCards(sortedIndices);
   };
 
-  const renderPlayerRow = (player: (typeof state.players)[number], playerIndex: number) => {
-    const isCurrentUser = player.id === currentUserId;
-    const isTheirTurn = state.currentTurn === playerIndex;
-    const debugPlayer =
-      !import.meta.env.PROD && revealAll ? state.debugState?.players[playerIndex] : undefined;
-    const displayPlayer = debugPlayer ?? player;
-    const showRealHand = isCurrentUser || !!debugPlayer;
-    const teamColor =
-      displayPlayer.team === "red"
-        ? "text-red-500"
-        : displayPlayer.team === "black"
-          ? "text-gray-800"
-          : "text-gray-400";
-    return (
-      <div
-        key={player.id}
-        className={cn("player-row", isCurrentUser && "current", isTheirTurn && "active-turn")}
-      >
-        <div className="player-info">
-          <img src={player.avatarUrl} alt={player.username} width={32} height={32} />
-          <span className={cn("player-name", teamColor)}>
-            {player.username}
-            {displayPlayer.team === null && " (?)"}
-          </span>
-          {isTheirTurn && <span className="turn-indicator">◀</span>}
-          {displayPlayer.team !== null && displayPlayer.team === state.losingTeam && <span>Loser</span>}
-        </div>
-        <div className="flex flex-row flex-nowrap gap-1 overflow-x-auto">
-          {showRealHand
-            ? displayPlayer.hand.map((card, i) => (
-                <Card
-                  key={`${card.rank}-${card.suit.short}-${i}`}
-                  rank={card.rank}
-                  suitEmoji={card.suit.emoji}
-                  suit={suitVariant(card)}
-                  selectable={isCurrentUser && canInteract}
-                  selected={isCurrentUser && selectedIndices.has(i)}
-                  onClick={isCurrentUser && canInteract ? () => toggleCard(i) : undefined}
-                />
-              ))
-            : Array.from({ length: player.handSize }, (_, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: stable placeholder list
-                <Card key={i} faceDown />
-              ))}
-        </div>
-      </div>
-    );
-  };
+  const opponents = useMemo(() => {
+    if (currentPlayerIndex < 0) return state.players;
+    const others = [
+      ...state.players.slice(currentPlayerIndex + 1),
+      ...state.players.slice(0, currentPlayerIndex),
+    ];
+    return others;
+  }, [state.players, currentPlayerIndex]);
+
+  const playLegal = (isValidPlay && isMyTurn) || (isValidChaGoPlay && isEligibleForChaGo);
+  const playLabel =
+    isValidChaGoPlay && isEligibleForChaGo
+      ? chaGoPhase === "cha-available"
+        ? "CHA"
+        : "GO"
+      : selectedPlay
+        ? `PLAY ${selectedPlay.name.toUpperCase()}`
+        : "SELECT CARDS";
+
+  const pileType = state.currentPlay?.playType ?? "OPEN";
+  const pilePlayer = state.currentPlay
+    ? state.players.find((p) => p.id === state.currentPlay?.playerId)
+    : null;
+
+  const isDev = !import.meta.env.PROD;
 
   return (
-    <div className="game">
-      {!import.meta.env.PROD && (
-        <Button variant="outline" size="sm" onClick={() => setRevealAll((v) => !v)}>
-          {revealAll ? "Hide" : "Reveal All"}
-        </Button>
-      )}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <h1>Red 10</h1>
+    <div
+      className="scanlines"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "radial-gradient(ellipse at center, #4a2818 0%, #1a0e08 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: STAGE_W,
+          height: STAGE_H,
+          transform: `scale(${scale})`,
+          transformOrigin: "center center",
+        }}
+      >
+        <FeltTable width={STAGE_W} height={STAGE_H} inset={48} />
 
-          <div className="turn-info">
-            {isMyTurn ? <strong>Your turn!</strong> : <span>Waiting for {turnPlayer?.username}...</span>}
-            {isEligibleForChaGo && (
-              <strong>{chaGoPhase === "cha-available" ? "You can CHA!" : "You can GO!"}</strong>
-            )}
+        <div style={{ position: "absolute", top: 18, left: 24, zIndex: 5 }}>
+          <PixelPanel width={260} height={92} style={{ padding: 12 }}>
+            <div className="font-pixel text-[9px] tracking-widest text-[color:var(--color-paper-dim)]">
+              ROUND · LIVE
+            </div>
+            <div className="font-pixel text-[14px] tracking-widest text-[color:var(--color-accent)] mt-1.5">
+              TYPE: {pileType.toUpperCase()}
+            </div>
+            <div className="font-pixel text-[8px] tracking-wider text-[color:var(--color-paper-muted)] mt-1">
+              {state.currentPlay
+                ? `BEAT ▸ ${pileType.toUpperCase()} BY ${pilePlayer?.username.toUpperCase() ?? ""}`
+                : "ANY PLAY ALLOWED"}
+            </div>
+          </PixelPanel>
+        </div>
+
+        <div style={{ position: "absolute", top: 18, right: 24, zIndex: 5 }}>
+          <PixelPanel width={210} height={92} accent="var(--color-team-red)" style={{ padding: 12 }}>
+            <div className="font-pixel text-[9px] tracking-widest text-[color:var(--color-paper-dim)]">
+              STAKES
+            </div>
+            <div
+              className="font-pixel text-[18px] tracking-widest mt-1.5"
+              style={{
+                color: "var(--color-team-red)",
+                textShadow: "0 0 6px var(--color-team-red-glow)",
+              }}
+            >
+              × 1
+            </div>
+            <div className="font-pixel text-[8px] tracking-wider text-[color:var(--color-paper-muted)] mt-0.5">
+              BASE ROUND
+            </div>
+          </PixelPanel>
+        </div>
+
+        {opponents.map((player, idx) => {
+          const pos = OPPONENT_POSITIONS[idx % OPPONENT_POSITIONS.length];
+          const playerOriginalIndex = state.players.findIndex((p) => p.id === player.id);
+          const isTheirTurn = state.currentTurn === playerOriginalIndex;
+          const isFirstOut = state.firstFinisherId === player.id;
+          return (
+            <OpponentToken
+              key={player.id}
+              player={player}
+              position={pos}
+              isTheirTurn={isTheirTurn}
+              isFirstOut={isFirstOut}
+              revealHand={isDev && revealAll}
+            />
+          );
+        })}
+
+        {/* Pile in center */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "44%",
+            transform: "translate(-50%, -50%)",
+            display: "flex",
+            zIndex: 4,
+          }}
+        >
+          {state.currentPlay ? (
+            state.currentPlay.cards.map((c, i) => {
+              const cnt = state.currentPlay?.cards.length ?? 1;
+              const angle = (i - (cnt - 1) / 2) * 6;
+              return (
+                <div key={`${c.rank}-${c.suit.short}-${i}`} style={{ marginLeft: i === 0 ? 0 : 6 }}>
+                  <Card
+                    rank={c.rank}
+                    suitShort={c.suit.short as SuitShort}
+                    width={88}
+                    height={124}
+                    rotate={angle}
+                  />
+                </div>
+              );
+            })
+          ) : (
+            <div
+              className="font-pixel text-[10px] tracking-widest"
+              style={{ color: "var(--color-paper-muted)" }}
+            >
+              ◂ EMPTY PILE ▸
+            </div>
+          )}
+        </div>
+        {state.currentPlay && (
+          <div
+            className="font-pixel text-[9px] tracking-widest"
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "61%",
+              transform: "translateX(-50%)",
+              color: "var(--color-paper-muted)",
+              zIndex: 4,
+            }}
+          >
+            ◂ {pilePlayer?.username.toUpperCase() ?? ""} PLAYED ▸
           </div>
+        )}
 
-          {state.currentPlay && (
-            <div className="flex flex-row flex-nowrap gap-1 items-center overflow-x-auto">
-              <span>Current play ({state.currentPlay.playType}): </span>
-              {state.currentPlay.cards.map((c, i) => (
-                <Card
-                  key={`${c.rank}-${c.suit.short}-${i}`}
-                  rank={c.rank}
-                  suitEmoji={c.suit.emoji}
-                  suit={suitVariant(c)}
-                />
-              ))}
-              <span> by {state.players.find((p) => p.id === state.currentPlay?.playerId)?.username}</span>
-            </div>
-          )}
+        {/* Turn indicator */}
+        {state.winningTeam === null && (
+          <div
+            className="font-pixel"
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 240,
+              transform: "translateX(-50%)",
+              fontSize: 14,
+              color: isMyTurn ? "var(--color-accent)" : "var(--color-paper-dim)",
+              letterSpacing: 4,
+              textShadow: isMyTurn
+                ? "2px 2px 0 #000, 0 0 12px color-mix(in srgb, var(--color-accent) 67%, transparent)"
+                : "2px 2px 0 #000",
+              zIndex: 5,
+              animation: isMyTurn ? "pixel-float 1.6s ease-in-out infinite" : undefined,
+            }}
+          >
+            {isMyTurn ? "▼ YOUR TURN ▼" : `WAITING FOR ${turnPlayer?.username.toUpperCase() ?? ""}`}
+          </div>
+        )}
 
-          {chaGoPhase && isEligibleForChaGo && (
-            <div className="cha-go-indicator">
-              <strong>{chaGoPhase === "cha-available" ? "CHA available!" : "GO available!"}</strong>
-            </div>
-          )}
-
-          {currentPlayer && canInteract && state.winningTeam === null && (
-            <div className="play-area">
-              <div className="selection-info">
-                {selectedCards.length === 0 ? (
-                  <span>Select cards to play</span>
-                ) : (
-                  <span>
-                    {selectedPlay?.name}: {selectedCards.map((c) => c.display).join(" ")}
-                  </span>
-                )}
+        {/* Cha-Go badge */}
+        {chaGoPhase && isEligibleForChaGo && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 280,
+              transform: "translateX(-50%)",
+              zIndex: 5,
+            }}
+          >
+            <PixelPanel
+              accent="var(--color-accent)"
+              glow="color-mix(in srgb, var(--color-accent) 67%, transparent)"
+              style={{ padding: "6px 12px" }}
+            >
+              <div className="font-pixel text-[10px] tracking-widest text-[color:var(--color-accent)]">
+                {chaGoPhase === "cha-available" ? "▸ CHA AVAILABLE ◂" : "▸ GO AVAILABLE ◂"}
               </div>
-              <Button
-                onClick={handlePlay}
-                disabled={!(isValidPlay && isMyTurn) && !(isValidChaGoPlay && isEligibleForChaGo)}
+            </PixelPanel>
+          </div>
+        )}
+
+        {/* Hand */}
+        {currentPlayer && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 28,
+              transform: "translateX(-50%)",
+              display: "flex",
+              zIndex: 6,
+            }}
+          >
+            {currentPlayer.hand.map((c, i) => {
+              const cnt = currentPlayer.hand.length;
+              const angle = (i - (cnt - 1) / 2) * 3;
+              const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
+              const isSel = selectedIndices.has(i);
+              return (
+                <div key={`${c.rank}-${c.suit.short}-${i}`} style={{ marginLeft: i === 0 ? 0 : -34 }}>
+                  <Card
+                    rank={c.rank}
+                    suitShort={c.suit.short as SuitShort}
+                    width={88}
+                    height={124}
+                    rotate={angle}
+                    selectable={canInteract}
+                    selected={isSel}
+                    glow={isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null}
+                    onClick={canInteract ? () => toggleCard(i) : undefined}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Action area right */}
+        {canInteract && state.winningTeam === null && (
+          <div
+            style={{
+              position: "absolute",
+              right: 24,
+              bottom: 24,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              zIndex: 6,
+            }}
+          >
+            <PixelButton
+              tone={playLegal ? "success" : "muted"}
+              dim={!playLegal}
+              disabled={!playLegal}
+              onClick={handlePlay}
+            >
+              {playLabel}
+            </PixelButton>
+            {isMyTurn && (
+              <PixelButton
+                tone={canPass ? "accent" : "muted"}
+                dim={!canPass}
+                disabled={!canPass}
+                onClick={onPass}
               >
-                {isValidChaGoPlay && isEligibleForChaGo
-                  ? chaGoPhase === "cha-available"
-                    ? "CHA"
-                    : "GO"
-                  : `Play ${selectedPlay?.name ?? ""}`}
-              </Button>
-              {isMyTurn && (
-                <Button onClick={onPass} disabled={!canPass}>
-                  Pass
-                </Button>
+                SKIP
+              </PixelButton>
+            )}
+            <PixelButton
+              tone="muted"
+              dim={selectedIndices.size === 0}
+              disabled={selectedIndices.size === 0}
+              onClick={() => setSelectedIndices(new Set())}
+            >
+              CLEAR
+            </PixelButton>
+          </div>
+        )}
+
+        {/* Selection feedback left */}
+        {canInteract && selectedPlay && state.winningTeam === null && (
+          <div
+            style={{
+              position: "absolute",
+              left: 24,
+              bottom: 24,
+              zIndex: 6,
+            }}
+          >
+            <PixelPanel
+              width={280}
+              accent={playLegal ? "var(--color-success)" : "var(--color-danger)"}
+              style={{ padding: 12 }}
+            >
+              <div
+                className="font-pixel text-[9px] tracking-widest"
+                style={{ color: playLegal ? "var(--color-success)" : "var(--color-danger)" }}
+              >
+                {playLegal ? "✓ LEGAL PLAY" : "✗ ILLEGAL"}
+              </div>
+              <div className="font-pixel text-[8px] tracking-wider text-[color:var(--color-paper)] mt-1.5">
+                {selectedPlay.name.toUpperCase()}: {selectedCards.map((c) => c.display).join(" ")}
+              </div>
+              <div className="font-pixel text-[7px] tracking-wider text-[color:var(--color-paper-muted)] mt-1">
+                {playLegal
+                  ? "PRESS PLAY TO COMMIT"
+                  : state.currentPlay
+                    ? `MUST BEAT ${pileType.toUpperCase()}`
+                    : "INVALID HAND"}
+              </div>
+            </PixelPanel>
+          </div>
+        )}
+
+        {/* Game over overlay */}
+        {state.winningTeam !== null && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(10, 6, 4, 0.78)",
+              zIndex: 50,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <PixelPanel
+              width={520}
+              accent={
+                state.winningTeam === "wash"
+                  ? "var(--color-paper-dim)"
+                  : state.winningTeam === "red"
+                    ? "var(--color-team-red)"
+                    : "var(--color-paper)"
+              }
+              glow={
+                state.winningTeam === "red"
+                  ? "var(--color-team-red-glow)"
+                  : "color-mix(in srgb, var(--color-accent) 50%, transparent)"
+              }
+              style={{ padding: 24, textAlign: "center" }}
+            >
+              <div className="font-pixel text-[10px] tracking-widest text-[color:var(--color-paper-dim)]">
+                ROUND COMPLETE
+              </div>
+              <div
+                className="font-pixel mt-3"
+                style={{
+                  fontSize: 28,
+                  letterSpacing: 6,
+                  color:
+                    state.winningTeam === "wash"
+                      ? "var(--color-paper-dim)"
+                      : state.winningTeam === "red"
+                        ? "var(--color-team-red)"
+                        : "var(--color-paper)",
+                  textShadow: "3px 3px 0 #000",
+                }}
+              >
+                {state.winningTeam === "wash" ? "WASH · TIE" : `${state.winningTeam.toUpperCase()} TEAM WINS`}
+              </div>
+              {state.firstFinisherId && (
+                <div className="font-pixel text-[9px] tracking-widest text-[color:var(--color-accent)] mt-3">
+                  ★ FIRST OUT:{" "}
+                  {state.players.find((p) => p.id === state.firstFinisherId)?.username.toUpperCase()}
+                </div>
               )}
-              <Button onClick={() => setSelectedIndices(new Set())} disabled={selectedCards.length === 0}>
-                Clear
-              </Button>
-            </div>
-          )}
-
-          {state.winningTeam && (
-            <div className="game-over">
-              {state.winningTeam === "wash" ? (
-                <strong>Wash! (tie)</strong>
-              ) : (
-                <strong>{state.winningTeam === "red" ? "Red" : "Black"} team wins!</strong>
+              {state.losingTeam && (
+                <div className="font-pixel text-[8px] tracking-wider text-[color:var(--color-paper-muted)] mt-2">
+                  LOSING TEAM: {state.losingTeam.toUpperCase()}
+                </div>
               )}
-              <span>First out: {state.players.find((p) => p.id === state.firstFinisherId)?.username}</span>
-              <span>Losing team: {state.losingTeam}</span>
-              {state.hostId === currentUserId && <Button onClick={onResetGame}>Restart Game</Button>}
-            </div>
-          )}
+              {state.hostId === currentUserId && (
+                <div style={{ marginTop: 18, display: "flex", justifyContent: "center" }}>
+                  <PixelButton tone="accent" onClick={onResetGame}>
+                    NEXT ROUND ▸
+                  </PixelButton>
+                </div>
+              )}
+            </PixelPanel>
+          </div>
+        )}
 
-          {state.players.flatMap((player, playerIndex) =>
-            player.id === currentUserId ? [renderPlayerRow(player, playerIndex)] : [],
-          )}
-        </div>
+        {/* Dev reveal toggle */}
+        {isDev && (
+          <div style={{ position: "absolute", left: 24, top: 120, zIndex: 6 }}>
+            <PixelButton tone={revealAll ? "danger" : "muted"} onClick={() => setRevealAll((v) => !v)}>
+              {revealAll ? "HIDE" : "REVEAL"}
+            </PixelButton>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        <div className="players-list">
-          {state.players.flatMap((player, playerIndex) =>
-            player.id !== currentUserId ? [renderPlayerRow(player, playerIndex)] : [],
-          )}
+interface OpponentTokenProps {
+  player: GamePlayer;
+  position: { x: number; y: number };
+  isTheirTurn: boolean;
+  isFirstOut: boolean;
+  revealHand: boolean;
+}
+
+function OpponentToken({ player, position, isTheirTurn, isFirstOut, revealHand }: OpponentTokenProps) {
+  const teamColor =
+    player.team === "red"
+      ? "var(--color-team-red)"
+      : player.team === "black"
+        ? "var(--color-team-black)"
+        : null;
+  const teamGlow =
+    player.team === "red"
+      ? "var(--color-team-red-glow)"
+      : player.team === "black"
+        ? "var(--color-team-black-glow)"
+        : null;
+
+  const avatarBoxShadow = teamColor
+    ? `inset 0 0 0 3px ${teamColor}, 0 0 12px ${teamGlow}`
+    : "inset 0 0 0 3px var(--color-panel-border)";
+
+  const turnRingStyle: CSSProperties | undefined = isTheirTurn
+    ? {
+        position: "absolute",
+        inset: -6,
+        boxShadow:
+          "0 0 0 3px var(--color-accent), 0 0 16px color-mix(in srgb, var(--color-accent) 67%, transparent)",
+        pointerEvents: "none",
+      }
+    : undefined;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: position.x,
+        top: position.y,
+        transform: "translate(-50%, -50%)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+        zIndex: 4,
+      }}
+    >
+      {/* Card-back fan or revealed mini hand */}
+      <div
+        style={{
+          position: "relative",
+          width: 88,
+          height: 56,
+          marginBottom: -4,
+        }}
+      >
+        {revealHand
+          ? player.hand.slice(0, 5).map((c, k) => (
+              <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: small fan, stable order
+                key={k}
+                style={{
+                  position: "absolute",
+                  left: 44 + (k - 2) * 14 - 18,
+                  top: 0,
+                  transform: `rotate(${(k - 2) * 8}deg)`,
+                  transformOrigin: "bottom center",
+                }}
+              >
+                <Card rank={c.rank} suitShort={c.suit.short as SuitShort} width={36} height={52} />
+              </div>
+            ))
+          : [-1, 0, 1].map((k, idx) => (
+              <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: 3-card fan, stable order
+                key={idx}
+                style={{
+                  position: "absolute",
+                  left: 44 + k * 12 - 18,
+                  top: 0,
+                  transform: `rotate(${k * 12}deg)`,
+                  transformOrigin: "bottom center",
+                }}
+              >
+                <Card faceDown width={36} height={52} />
+              </div>
+            ))}
+      </div>
+
+      <div style={{ position: "relative" }}>
+        {turnRingStyle && <div style={turnRingStyle} />}
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            background: "var(--color-panel)",
+            boxShadow: avatarBoxShadow,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          <img
+            src={player.avatarUrl}
+            alt={player.username}
+            width={56}
+            height={56}
+            style={{ display: "block", imageRendering: "pixelated" }}
+          />
         </div>
+      </div>
+
+      <div
+        className="font-pixel"
+        style={{
+          fontSize: 8,
+          color: "var(--color-paper)",
+          letterSpacing: 1,
+          textShadow: "1px 1px 0 #000",
+          maxWidth: 96,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {player.username.toUpperCase()}
+      </div>
+      <div
+        className="font-pixel"
+        style={{
+          fontSize: 7,
+          color: isFirstOut ? "var(--color-accent)" : "var(--color-paper-dim)",
+          letterSpacing: 1,
+        }}
+      >
+        {isFirstOut ? "★ FIRST OUT" : `▮ ${player.handSize}`}
       </div>
     </div>
   );
