@@ -121,8 +121,16 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     const game = getGame(meta.roomId);
     if (!game) return;
 
+    if (game.getChaGoPhase() !== null) {
+      const chaGo = game.makeChaGoPlay(socket.id, cardIndices);
+      if (chaGo.executed) {
+        sendGameStateToPlayers(io, meta.roomId, game);
+        processBotTurns(io, meta.roomId, game);
+        return;
+      }
+    }
+
     if (!game.isPlayerTurn(socket.id)) {
-      socket.emit("lobby:error", "Not your turn");
       return;
     }
 
