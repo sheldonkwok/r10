@@ -1,4 +1,10 @@
-import { compare, type GameState, play } from "game";
+import {
+  canPlay,
+  chaGoEligibility,
+  isValidChaGoPlay as checkValidChaGoPlay,
+  type GameState,
+  play,
+} from "game";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,15 +32,10 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   const turnPlayer = state.players[state.currentTurn];
 
   const chaGoPhase = state.chaGoPhase ?? null;
-  const isEligibleForChaGo = useMemo(() => {
-    if (chaGoPhase === null) return false;
-    if (state.lastPlayerId === currentUserId) return false;
-    if (!currentPlayer || !state.currentPlay) return false;
-    const currentPlayObj = play.get(state.currentPlay.cards);
-    const matchingCards = currentPlayer.hand.filter((c) => c.value === currentPlayObj.value);
-    if (chaGoPhase === "cha-available") return matchingCards.length >= 2;
-    return matchingCards.length >= 1;
-  }, [chaGoPhase, state.lastPlayerId, currentUserId, currentPlayer, state.currentPlay]);
+  const isEligibleForChaGo = useMemo(
+    () => chaGoEligibility(state, currentUserId) !== null,
+    [state, currentUserId],
+  );
   const canInteract = isMyTurn || isEligibleForChaGo;
 
   // Clear selection when turn changes or after playing
@@ -55,43 +56,30 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     });
   };
 
+  const sortedIndices = useMemo(() => [...selectedIndices].sort((a, b) => a - b), [selectedIndices]);
+
   const selectedCards = useMemo(() => {
     if (!currentPlayer) return [];
-    return [...selectedIndices]
-      .sort((a, b) => a - b)
+    return sortedIndices
       .filter((i) => i < currentPlayer.hand.length)
       .map((i) => currentPlayer.hand[i])
       .filter((c) => c !== undefined);
-  }, [currentPlayer, selectedIndices]);
+  }, [currentPlayer, sortedIndices]);
 
   const selectedPlay = useMemo(() => {
     if (selectedCards.length === 0) return null;
     return play.get(selectedCards);
   }, [selectedCards]);
 
-  const isValidPlay = useMemo(() => {
-    if (!selectedPlay || selectedPlay.name === "Illegal") return false;
-    if (state.chaGoLocked) return false;
+  const isValidPlay = useMemo(
+    () => canPlay(state, currentUserId, sortedIndices).valid,
+    [state, currentUserId, sortedIndices],
+  );
 
-    // If there's a current play to beat and it's not our own play
-    if (state.currentPlay && state.lastPlayerId !== currentUserId) {
-      const currentPlayObj = play.get(state.currentPlay.cards);
-      const result = compare(currentPlayObj, selectedPlay);
-      return result.valid;
-    }
-
-    return true;
-  }, [selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId, state.chaGoLocked]);
-
-  const isValidChaGoPlay = useMemo(() => {
-    if (!chaGoPhase || !selectedPlay || !state.currentPlay) return false;
-    if (state.lastPlayerId === currentUserId) return false;
-    const currentPlayObj = play.get(state.currentPlay.cards);
-    if (chaGoPhase === "cha-available") {
-      return selectedPlay.name === "Pair" && selectedPlay.value === currentPlayObj.value;
-    }
-    return selectedPlay.name === "Single" && selectedPlay.value === currentPlayObj.value;
-  }, [chaGoPhase, selectedPlay, state.currentPlay, state.lastPlayerId, currentUserId]);
+  const isValidChaGoPlay = useMemo(
+    () => checkValidChaGoPlay(state, currentUserId, sortedIndices),
+    [state, currentUserId, sortedIndices],
+  );
 
   const canPass = state.currentPlay !== null && state.lastPlayerId !== currentUserId;
 
@@ -99,8 +87,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     const validNormal = isValidPlay && isMyTurn;
     const validChaGo = isValidChaGoPlay && isEligibleForChaGo;
     if (!validNormal && !validChaGo) return;
-    const indices = [...selectedIndices].sort((a, b) => a - b);
-    onPlayCards(indices);
+    onPlayCards(sortedIndices);
   };
 
   const renderPlayerRow = (player: (typeof state.players)[number], playerIndex: number) => {
