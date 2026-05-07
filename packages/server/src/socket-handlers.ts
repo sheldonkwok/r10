@@ -9,12 +9,16 @@ type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
 interface SocketMeta {
   roomId: string;
+  playerId: string;
 }
 
-function sendGameStateToPlayers(io: IOServer, _roomId: string, game: Game) {
+const socketRooms = new Map<string, SocketMeta>();
+
+function sendGameStateToPlayers(io: IOServer, roomId: string, game: Game) {
   const base = game.getState();
-  for (const socketId of game.getSocketIds()) {
-    io.to(socketId).emit("game:state", game.getStateForSocket(socketId, base));
+  for (const [socketId, meta] of socketRooms) {
+    if (meta.roomId !== roomId) continue;
+    io.to(socketId).emit("game:state", game.getStateForPlayer(meta.playerId, base));
   }
 }
 
@@ -40,8 +44,6 @@ async function processBotTurns(io: IOServer, roomId: string, game: Game) {
   }
 }
 
-const socketRooms = new Map<string, SocketMeta>();
-
 function broadcastState(io: IOServer, roomId: string) {
   const lobby = getOrCreateLobby(roomId);
   io.to(roomId).emit("lobby:state", lobby.getState());
@@ -53,14 +55,11 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
       const user = await getDiscordUser(token);
 
       const existingGame = getGame(roomId);
-      if (existingGame) {
-        const rejoined = existingGame.rejoinPlayer(user.id, socket.id);
-        if (rejoined) {
-          socketRooms.set(socket.id, { roomId });
-          await socket.join(roomId);
-          socket.emit("game:state", existingGame.getStateForSocket(socket.id));
-          return;
-        }
+      if (existingGame?.getPlayerIds().includes(user.id)) {
+        socketRooms.set(socket.id, { roomId, playerId: user.id });
+        await socket.join(roomId);
+        socket.emit("game:state", existingGame.getStateForPlayer(user.id));
+        return;
       }
 
       const lobby = getOrCreateLobby(roomId);
@@ -77,7 +76,7 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
         }
       }
 
-      socketRooms.set(socket.id, { roomId });
+      socketRooms.set(socket.id, { roomId, playerId: user.id });
       await socket.join(roomId);
       broadcastState(io, roomId);
     } catch {
@@ -109,7 +108,7 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     }
 
     lobby.fillWithBots();
-    const game = createGame(meta.roomId, lobby.getPlayerEntries());
+    const game = createGame(meta.roomId, lobby.getState().players);
     sendGameStateToPlayers(io, meta.roomId, game);
     processBotTurns(io, meta.roomId, game);
   });
@@ -122,7 +121,7 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     if (!game) return;
 
     if (game.getChaGoPhase() !== null) {
-      const chaGo = game.makeChaGoPlay(socket.id, cardIndices);
+      const chaGo = game.makeChaGoPlay(meta.playerId, cardIndices);
       if (chaGo.executed) {
         sendGameStateToPlayers(io, meta.roomId, game);
         processBotTurns(io, meta.roomId, game);
@@ -130,7 +129,7 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
       }
     }
 
-    if (!game.isPlayerTurn(socket.id)) {
+    if (!game.isPlayerTurn(meta.playerId)) {
       return;
     }
 
@@ -151,7 +150,7 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     const game = getGame(meta.roomId);
     if (!game) return;
 
-    if (!game.isPlayerTurn(socket.id)) {
+    if (!game.isPlayerTurn(meta.playerId)) {
       socket.emit("lobby:error", "Not your turn");
       return;
     }
@@ -194,11 +193,16 @@ function handleDisconnect(io: IOServer, socket: IOSocket) {
   const meta = socketRooms.get(socket.id);
   if (!meta) return;
 
+  socketRooms.delete(socket.id);
+  socket.leave(meta.roomId);
+
+  // Mid-game: leave lobby state alone so the player can rejoin.
+  // The Game tracks players by stable id, so a missing socket binding just
+  // means broadcasts skip them until they reconnect.
+  if (getGame(meta.roomId)) return;
+
   const lobby = getOrCreateLobby(meta.roomId);
   lobby.removePlayer(socket.id);
-  socketRooms.delete(socket.id);
-
-  socket.leave(meta.roomId);
   broadcastState(io, meta.roomId);
   removeLobbyIfEmpty(meta.roomId);
 }

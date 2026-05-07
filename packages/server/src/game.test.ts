@@ -5,11 +5,15 @@ import { Game } from "./game.ts";
 
 const { SUITS, create } = card;
 
-function makeLobbyPlayers(): [string, LobbyPlayer][] {
-  return (["p0", "p1", "p2", "p3", "p4", "p5"] as const).map((id, i) => [
-    `socket_${id}`,
-    { id, username: id, avatarUrl: "", ready: true, isHost: i === 0, isBot: false },
-  ]);
+function makeLobbyPlayers(): LobbyPlayer[] {
+  return (["p0", "p1", "p2", "p3", "p4", "p5"] as const).map((id, i) => ({
+    id,
+    username: id,
+    avatarUrl: "",
+    ready: true,
+    isHost: i === 0,
+    isBot: false,
+  }));
 }
 
 // p0: two cards, opens with single 5 (index 0)
@@ -81,7 +85,7 @@ describe("CHA/GO mechanics", () => {
     });
 
     it("allows a CHA matching the new single's value", () => {
-      const result = game.makeChaGoPlay("socket_p2", [0, 1]); // pair of 8s
+      const result = game.makeChaGoPlay("p2", [0, 1]); // pair of 8s
       expect(result.executed).toBe(true);
       expect(game.getState().chaGoPhase).toBe("go-available");
       expect(game.getState().currentPlay?.playerId).toBe("p2");
@@ -91,7 +95,7 @@ describe("CHA/GO mechanics", () => {
     it("rejects a CHA matching the prior single's value", () => {
       // p4 has a pair of 5s — that was the original CHA target, but the
       // window has shifted to value 6 after p1's escalation.
-      const result = game.makeChaGoPlay("socket_p4", [0, 1]);
+      const result = game.makeChaGoPlay("p4", [0, 1]);
       expect(result.executed).toBe(false);
       expect(game.getState().chaGoPhase).toBe("cha-available");
       expect(game.getState().currentPlay?.playerId).toBe("p1");
@@ -117,7 +121,7 @@ describe("CHA/GO mechanics", () => {
     beforeEach(() => {
       game = new Game("room1", makeLobbyPlayers(), makeOutOfTurnHands());
       game.makePlay([0]); // p0 plays single 5; turn is now p1
-      game.makeChaGoPlay("socket_p2", [0, 1]); // p2 CHAs out of turn
+      game.makeChaGoPlay("p2", [0, 1]); // p2 CHAs out of turn
     });
 
     it("sets phase to go-available", () => {
@@ -157,7 +161,7 @@ describe("CHA/GO mechanics", () => {
 
     it("does not mutate state when a stale CHA arrives", () => {
       const before = game.getState();
-      const result = game.makeChaGoPlay("socket_p2", [0, 1]); // p2 still has pair of 5s
+      const result = game.makeChaGoPlay("p2", [0, 1]); // p2 still has pair of 5s
       const after = game.getState();
       expect(result.executed).toBe(false);
       expect(after.chaGoPhase).toBeNull();
@@ -173,7 +177,7 @@ describe("CHA/GO mechanics", () => {
     });
 
     it("ignores a single (non-pair) sent during cha-available", () => {
-      const result = game.makeChaGoPlay("socket_p2", [0]); // p2 sends just one 5
+      const result = game.makeChaGoPlay("p2", [0]); // p2 sends just one 5
       expect(result.executed).toBe(false);
       expect(game.getState().chaGoPhase).toBe("cha-available");
       expect(game.getState().currentPlay?.playerId).toBe("p0");
@@ -190,7 +194,7 @@ describe("CHA/GO mechanics", () => {
       // p0 has only a single 5 in this fixture, but the guard runs before card
       // validation — even if they had a pair, lastPlayerId is rejected.
       const before = game.getState();
-      game.makeChaGoPlay("socket_p0", [0]);
+      game.makeChaGoPlay("p0", [0]);
       const after = game.getState();
       expect(after.chaGoPhase).toBe("cha-available");
       expect(after.currentPlay?.playerId).toBe(before.currentPlay?.playerId);
@@ -210,7 +214,7 @@ describe("CHA/GO mechanics", () => {
     });
 
     it("does not mutate state when a bomb is sent", () => {
-      const result = game.makeChaGoPlay("socket_p1", [0, 1, 2]);
+      const result = game.makeChaGoPlay("p1", [0, 1, 2]);
       expect(result.executed).toBe(false);
       expect(game.getState().chaGoPhase).toBe("cha-available");
       expect(game.getState().currentPlay?.playerId).toBe("p0");
@@ -221,8 +225,8 @@ describe("CHA/GO mechanics", () => {
     beforeEach(() => {
       game = new Game("room1", makeLobbyPlayers(), makeChaGoHands());
       game.makePlay([0]); // p0 plays single 5 → cha-available
-      game.makeChaGoPlay("socket_p1", [0, 1]); // p1 CHAs → go-available, locked
-      game.makeChaGoPlay("socket_p2", [0]); // p2 GOs → cha-available (locked), no remaining 5s
+      game.makeChaGoPlay("p1", [0, 1]); // p1 CHAs → go-available, locked
+      game.makeChaGoPlay("p2", [0]); // p2 GOs → cha-available (locked), no remaining 5s
     });
 
     it("flips back to cha-available after the GO", () => {
@@ -260,7 +264,7 @@ describe("CHA/GO mechanics", () => {
     beforeEach(() => {
       game = new Game("room1", makeLobbyPlayers(), makeHigherPairHands());
       game.makePlay([0]); // p0 single 5
-      game.makeChaGoPlay("socket_p1", [0, 1]); // p1 CHAs
+      game.makeChaGoPlay("p1", [0, 1]); // p1 CHAs
     });
 
     it("locks the round after the CHA", () => {
@@ -296,7 +300,7 @@ describe("CHA/GO mechanics", () => {
     beforeEach(() => {
       game = new Game("room1", makeLobbyPlayers(), makeNoGoHands());
       game.makePlay([0]); // p0 single 5
-      game.makeChaGoPlay("socket_p1", [0, 1]); // p1 CHAs → locked
+      game.makeChaGoPlay("p1", [0, 1]); // p1 CHAs → locked
       // pass-around: p2, p3, p4, p5, p0 all pass
       game.pass();
       game.pass();
@@ -342,8 +346,8 @@ describe("CHA/GO mechanics", () => {
     beforeEach(() => {
       game = new Game("room1", makeLobbyPlayers(), makePostGoHands());
       game.makePlay([0]); // p0 single 5
-      game.makeChaGoPlay("socket_p1", [0, 1]); // p1 CHAs
-      game.makeChaGoPlay("socket_p2", [0]); // p2 GOs
+      game.makeChaGoPlay("p1", [0, 1]); // p1 CHAs
+      game.makeChaGoPlay("p2", [0]); // p2 GOs
     });
 
     it("keeps the round locked", () => {

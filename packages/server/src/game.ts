@@ -16,7 +16,6 @@ type InternalPlayerInfo = Omit<GamePlayer, "handSize">;
 
 interface InternalPlayer {
   info: InternalPlayerInfo;
-  socketId: string | null; // null for bots
 }
 
 interface InternalPlay {
@@ -36,12 +35,12 @@ export class Game {
   private chaGoPhase: "cha-available" | "go-available" | null = null;
   private chaGoLocked: boolean = false;
 
-  constructor(roomId: string, lobbyPlayers: [string, LobbyPlayer][], dealtHands?: card.Cards[]) {
+  constructor(roomId: string, lobbyPlayers: LobbyPlayer[], dealtHands?: card.Cards[]) {
     this.roomId = roomId;
-    this.hostId = lobbyPlayers.find(([, p]) => p.isHost)?.[1].id ?? "";
+    this.hostId = lobbyPlayers.find((p) => p.isHost)?.id ?? "";
     const hands = dealtHands ?? card.createHands();
 
-    this.players = lobbyPlayers.map(([socketId, player], index) => ({
+    this.players = lobbyPlayers.map((player, index) => ({
       info: {
         id: player.id,
         username: player.username,
@@ -50,7 +49,6 @@ export class Game {
         hand: hands[index],
         team: "black" as const,
       },
-      socketId: player.isBot ? null : socketId,
     }));
 
     for (const player of this.players) {
@@ -86,11 +84,10 @@ export class Game {
     };
   }
 
-  getStateForSocket(socketId: string, base = this.getState()): GameState {
+  getStateForPlayer(playerId: string, base = this.getState()): GameState {
     const gameOver = base.winningTeam !== null;
-    const players = base.players.map((player, index) => {
-      const internal = this.players[index];
-      if (internal.socketId === socketId) return player;
+    const players = base.players.map((player) => {
+      if (player.id === playerId) return player;
       return {
         ...player,
         hand: [],
@@ -101,24 +98,16 @@ export class Game {
     return { ...base, players, debugState };
   }
 
-  getSocketIds(): string[] {
-    return this.players.flatMap((p) => (p.socketId !== null ? [p.socketId] : []));
-  }
-
-  rejoinPlayer(discordUserId: string, newSocketId: string): boolean {
-    const player = this.players.find((p) => p.info.id === discordUserId);
-    if (!player || player.info.isBot) return false;
-    player.socketId = newSocketId;
-    return true;
+  getPlayerIds(): string[] {
+    return this.players.map((p) => p.info.id);
   }
 
   getCurrentPlayer(): InternalPlayer {
     return this.players[this.currentTurn];
   }
 
-  isPlayerTurn(socketId: string): boolean {
-    const current = this.getCurrentPlayer();
-    return current.socketId === socketId;
+  isPlayerTurn(playerId: string): boolean {
+    return this.getCurrentPlayer().info.id === playerId;
   }
 
   makePlay(cardIndices: number[]): { success: boolean; error?: string } {
@@ -197,18 +186,11 @@ export class Game {
       .map((p) => p.info.id);
   }
 
-  isChaGoEligible(socketId: string): boolean {
-    if (this.chaGoPhase === null) return false;
-    const player = this.players.find((p) => p.socketId === socketId);
-    if (!player) return false;
-    return this.getEligibleChaGoPlayerIds().includes(player.info.id);
-  }
-
-  makeChaGoPlay(socketId: string, cardIndices: number[]): { executed: boolean } {
+  makeChaGoPlay(playerId: string, cardIndices: number[]): { executed: boolean } {
     if (this.chaGoPhase === null) return { executed: false };
     if (!this.currentPlayInternal) return { executed: false };
 
-    const playerEntry = this.players.find((p) => p.socketId === socketId);
+    const playerEntry = this.players.find((p) => p.info.id === playerId);
     if (!playerEntry) return { executed: false };
     if (playerEntry.info.id === this.lastPlayerId) return { executed: false };
 
@@ -411,8 +393,8 @@ export class Game {
 
 const games = new Map<string, Game>();
 
-export function createGame(roomId: string, lobbyPlayers: [string, LobbyPlayer][]): Game {
-  const game = new Game(roomId, lobbyPlayers);
+export function createGame(roomId: string, lobbyPlayers: LobbyPlayer[], dealtHands?: card.Cards[]): Game {
+  const game = new Game(roomId, lobbyPlayers, dealtHands);
   games.set(roomId, game);
   return game;
 }
