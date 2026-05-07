@@ -280,6 +280,22 @@ export class Game {
       return;
     }
 
+    if (
+      this.chaGoPhase !== null &&
+      this.currentPlayInternal !== null &&
+      player.info.id !== this.lastPlayerId
+    ) {
+      const value = this.currentPlayInternal.play.value;
+      const matchingIndices = hand
+        .map((c, i) => (c.value === value ? i : -1))
+        .filter((i): i is number => i !== -1);
+      const required = this.chaGoPhase === "cha-available" ? 2 : 1;
+      if (matchingIndices.length >= required) {
+        const result = this.makeChaGoPlay(player.info.id, matchingIndices.slice(0, required));
+        if (result.executed) return;
+      }
+    }
+
     if (this.chaGoLocked) {
       this.pass();
       return;

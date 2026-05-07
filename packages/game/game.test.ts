@@ -388,3 +388,76 @@ describe("CHA/GO mechanics", () => {
     });
   });
 });
+
+describe("bot cha/go preference", () => {
+  function makeBotPlayers(): LobbyPlayer[] {
+    return makeLobbyPlayers().map((p, i) => ({ ...p, isBot: i === 1 }));
+  }
+
+  describe("bot chas when cha-available and has matching pair", () => {
+    let game: Game;
+    beforeEach(() => {
+      // p0 plays single 5 → cha-available; p1 (bot) has pair of 5s at indices 0,1
+      game = new Game("room1", makeBotPlayers(), makeChaGoHands());
+      game.makePlay([0]); // p0 plays single 5
+      // turn is now p1 (bot)
+      game.makeBotPlay();
+    });
+
+    it("plays a cha instead of a regular card", () => {
+      expect(game.getState().chaGoPhase).toBe("go-available");
+    });
+
+    it("removes the pair from the bot's hand", () => {
+      const p1 = game.getState().players.find((p) => p.id === "p1");
+      expect(p1?.handSize).toBe(1);
+    });
+  });
+
+  describe("bot goes when go-available and has matching single", () => {
+    let game: Game;
+    beforeEach(() => {
+      // p0 opens single 5, p1 (human) chas → go-available, locked
+      // p2 (bot) has single 5 and should go
+      const players = makeLobbyPlayers().map((p, i) => ({ ...p, isBot: i === 2 }));
+      game = new Game("room1", players, makeChaGoHands());
+      game.makePlay([0]); // p0 plays single 5 → cha-available
+      game.makeChaGoPlay("p1", [0, 1]); // p1 chas → go-available, locked; turn advances past p1
+      // currentTurn is now p2 (bot)
+      game.makeBotPlay();
+    });
+
+    it("goes instead of passing", () => {
+      // After bot goes, phase flips back to cha-available (or null if no more)
+      const state = game.getState();
+      expect(state.chaGoPhase).not.toBe("go-available");
+    });
+
+    it("removes the single from the bot's hand", () => {
+      const p2 = game.getState().players.find((p) => p.id === "p2");
+      expect(p2?.handSize).toBe(1);
+    });
+  });
+
+  describe("bot passes when chaGoLocked but has no matching cards", () => {
+    let game: Game;
+    beforeEach(() => {
+      // p0 opens single 5; p1 (human) chas → go-available, locked
+      // p2 has a 5 but p3 (bot) has no 5s — should pass
+      const players = makeLobbyPlayers().map((p, i) => ({ ...p, isBot: i === 3 }));
+      // Give p3 cards with no 5s; advance past p2 by having p2 go
+      game = new Game("room1", players, makeChaGoHands());
+      game.makePlay([0]); // p0 plays single 5 → cha-available
+      game.makeChaGoPlay("p1", [0, 1]); // p1 chas → go-available, locked; turn = p2
+      game.makeChaGoPlay("p2", [0]); // p2 goes → cha-available, locked; turn = p3
+      // p3 (bot) has no 5s and chaGoLocked is true
+      game.makeBotPlay();
+    });
+
+    it("passes when locked and has no matching cards", () => {
+      const state = game.getState();
+      // Bot passed, so turn should have advanced away from p3
+      expect(state.currentTurn).not.toBe(3);
+    });
+  });
+});
