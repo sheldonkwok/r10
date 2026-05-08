@@ -1,6 +1,6 @@
 import type { DiscordSDK as DiscordSDKType } from "@discord/embedded-app-sdk";
 import { DiscordSDK } from "@discord/embedded-app-sdk";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID as string;
 
@@ -18,37 +18,41 @@ interface UseDiscordSdkResult {
   sdk: DiscordSDKType | null;
   auth: Auth | null;
   error: string | null;
+  needsUsername: boolean;
+  setWebUsername: (username: string) => void;
+}
+
+function getWebRoomId(): string {
+  return new URLSearchParams(window.location.search).get("room") ?? "main";
 }
 
 export function useDiscordSdk(): UseDiscordSdkResult {
   const [sdk, setSdk] = useState<DiscordSDKType | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsUsername, setNeedsUsername] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
-      // Mock mode when not running inside a Discord iframe
       const inDiscord = new URLSearchParams(window.location.search).has("frame_id");
       if (!inDiscord) {
         if (cancelled) return;
-        let mockUserId = localStorage.getItem("dev:mockUserId");
-        if (!mockUserId) {
-          mockUserId = `mock-${Math.random().toString(36).slice(2, 8)}`;
-          localStorage.setItem("dev:mockUserId", mockUserId);
+
+        const storedUserId = localStorage.getItem("web:userId");
+        const storedUsername = localStorage.getItem("web:username");
+
+        if (storedUserId && storedUsername) {
+          const token = `web-token:${storedUserId}:${encodeURIComponent(storedUsername)}`;
+          setAuth({
+            accessToken: token,
+            user: { id: storedUserId, username: storedUsername, avatar: null, global_name: storedUsername },
+          });
+          setSdk({ channelId: getWebRoomId() } as DiscordSDKType);
+        } else {
+          setNeedsUsername(true);
         }
-        const suffix = mockUserId.slice(-4);
-        setAuth({
-          accessToken: `mock-token:${mockUserId}`,
-          user: {
-            id: mockUserId,
-            username: `Dev-${suffix}`,
-            avatar: null,
-            global_name: `Dev-${suffix}`,
-          },
-        });
-        setSdk({ channelId: "mock-room" } as DiscordSDKType);
         return;
       }
 
@@ -102,5 +106,22 @@ export function useDiscordSdk(): UseDiscordSdkResult {
     };
   }, []);
 
-  return { sdk, auth, error };
+  const setWebUsername = useCallback((username: string) => {
+    let userId = localStorage.getItem("web:userId");
+    if (!userId) {
+      userId = `web-${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem("web:userId", userId);
+    }
+    localStorage.setItem("web:username", username);
+
+    const token = `web-token:${userId}:${encodeURIComponent(username)}`;
+    setAuth({
+      accessToken: token,
+      user: { id: userId, username, avatar: null, global_name: username },
+    });
+    setSdk({ channelId: getWebRoomId() } as DiscordSDKType);
+    setNeedsUsername(false);
+  }, []);
+
+  return { sdk, auth, error, needsUsername, setWebUsername };
 }

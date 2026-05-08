@@ -1,10 +1,11 @@
 import { Game } from "./components/Game.tsx";
 import { Lobby } from "./components/Lobby.tsx";
+import { UsernamePrompt } from "./components/UsernamePrompt.tsx";
 import { useDiscordSdk } from "./hooks/useDiscordSdk.ts";
 import { useSocket } from "./hooks/useSocket.ts";
 
 export function App() {
-  const { sdk, auth, error: sdkError } = useDiscordSdk();
+  const { sdk, auth, error: sdkError, needsUsername, setWebUsername } = useDiscordSdk();
   const roomId = sdk?.channelId ?? null;
   const token = auth?.accessToken ?? null;
   const {
@@ -22,6 +23,10 @@ export function App() {
 
   if (error) {
     return <div className="error">Error: {error}</div>;
+  }
+
+  if (needsUsername) {
+    return <UsernamePrompt onSubmit={setWebUsername} />;
   }
 
   if (!auth || !sdk) {

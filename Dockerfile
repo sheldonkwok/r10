@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/client/package.json packages/client/
 COPY packages/server/package.json packages/server/
-COPY packages/shared/package.json packages/shared/
+COPY packages/game/package.json packages/game/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
@@ -21,11 +21,11 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/client/package.json packages/client/
 COPY packages/server/package.json packages/server/
-COPY packages/shared/package.json packages/shared/
-RUN pnpm install --frozen-lockfile --prod --filter server --filter shared
+COPY packages/game/package.json packages/game/
+RUN pnpm install --frozen-lockfile --prod --filter server --filter game
 
 COPY packages/server/src packages/server/src
-COPY packages/shared packages/shared
+COPY packages/game packages/game
 COPY --from=builder /app/packages/client/dist packages/client/dist
 
 ENV NODE_ENV=production

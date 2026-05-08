@@ -8,7 +8,9 @@ Use pnpm for package management instead of npm
 
 * `client` is used for the frontend. All of the browser game rendering logic lives here.
 * `server` is used for the backend. It's a websocket server that maintains game state.
-* `shared` is used for shared code. Game logic lives here
+* `game` is used for game state and logic code. Heavily used by server and lightly used by client.
+
+If package structure changes, we need to update Dockerfile.
 
 ## CSS Conventions
 

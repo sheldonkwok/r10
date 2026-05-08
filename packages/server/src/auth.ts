@@ -49,6 +49,14 @@ export async function getDiscordUser(token: string): Promise<DiscordUser> {
     };
   }
 
+  if (token.startsWith("web-token:")) {
+    const rest = token.slice("web-token:".length);
+    const sepIdx = rest.indexOf(":");
+    const userId = rest.slice(0, sepIdx);
+    const username = decodeURIComponent(rest.slice(sepIdx + 1));
+    return { id: userId, username, avatar: null, discriminator: "0", global_name: username };
+  }
+
   const response = await fetch("https://discord.com/api/users/@me", {
     headers: { Authorization: `Bearer ${token}` },
   });
