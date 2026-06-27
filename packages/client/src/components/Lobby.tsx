@@ -1,4 +1,5 @@
 import type { LobbyState } from "game";
+import { useMobile } from "@/hooks/useMobile.ts";
 import { PlayerSlot } from "./PlayerSlot.tsx";
 import { PixelButton } from "./pixel/PixelButton.tsx";
 
@@ -10,6 +11,7 @@ interface LobbyProps {
 }
 
 export function Lobby({ state, currentUserId, onToggleReady, onStart }: LobbyProps) {
+  const isMobile = useMobile();
   const currentPlayer = state.players.find((p) => p.id === currentUserId);
   const isHost = currentPlayer?.isHost ?? false;
   const humanPlayers = state.players.filter((p) => !p.isBot);
@@ -48,38 +50,69 @@ export function Lobby({ state, currentUserId, onToggleReady, onStart }: LobbyPro
       <main
         style={{
           flex: 1,
-          padding: "0 28px",
+          padding: isMobile ? "0 20px" : "0 28px",
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 14,
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+          gap: isMobile ? 10 : 14,
           alignContent: "start",
+          overflowY: isMobile ? "auto" : undefined,
         }}
       >
         {slots.map((player, i) => (
-          <PlayerSlot key={player?.id ?? `slot-${i}`} player={player} />
+          <PlayerSlot key={player?.id ?? `slot-${i}`} player={player} compact={isMobile} />
         ))}
       </main>
 
       <footer
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "14px 28px",
+          flexDirection: isMobile ? "column" : "row",
+          justifyContent: isMobile ? undefined : "space-between",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? 12 : undefined,
+          padding: isMobile ? "18px 20px 40px" : "14px 28px",
           borderTop: "2px solid var(--color-panel-border)",
-          background: "rgba(0,0,0,0.27)",
+          background: isMobile ? "linear-gradient(0deg, #1a0e08 60%, transparent)" : "rgba(0,0,0,0.27)",
         }}
       >
-        <div className="font-pixel text-[8px] tracking-widest text-[color:var(--color-paper-dim)]">
-          {readyCount}/{state.maxPlayers} READY · TEAMS REVEALED AFTER DEAL
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <PixelButton tone={currentPlayer?.ready ? "muted" : "success"} onClick={onToggleReady}>
+        {isMobile && (
+          <div
+            className="font-pixel text-[9px] tracking-widest text-center"
+            style={{ color: allReady ? "var(--color-success)" : "var(--color-paper-muted)" }}
+          >
+            {allReady
+              ? `● ${readyCount}/${state.maxPlayers} READY · DEAL NOW`
+              : `○ ${readyCount}/${state.maxPlayers} READY`}
+          </div>
+        )}
+        {!isMobile && (
+          <div className="font-pixel text-[8px] tracking-widest text-[color:var(--color-paper-dim)]">
+            {readyCount}/{state.maxPlayers} READY · TEAMS REVEALED AFTER DEAL
+          </div>
+        )}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            gap: 8,
+          }}
+        >
+          <PixelButton
+            tone={currentPlayer?.ready ? "muted" : "success"}
+            onClick={onToggleReady}
+            style={isMobile ? { fontSize: 14, padding: "20px 0" } : undefined}
+          >
             {currentPlayer?.ready ? "UNREADY" : "READY"}
           </PixelButton>
           {isHost && (
-            <PixelButton tone="accent" disabled={!allReady} dim={!allReady} onClick={onStart}>
-              START GAME ▸
+            <PixelButton
+              tone="accent"
+              disabled={!allReady}
+              dim={!allReady}
+              onClick={onStart}
+              style={isMobile ? { fontSize: 14, padding: "20px 0" } : undefined}
+            >
+              {isMobile ? "▸ DEAL CARDS" : "START GAME ▸"}
             </PixelButton>
           )}
         </div>
