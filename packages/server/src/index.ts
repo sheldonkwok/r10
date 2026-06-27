@@ -4,6 +4,7 @@ import cors from "cors";
 import express from "express";
 import type { ClientToServerEvents, ServerToClientEvents } from "game";
 import { exchangeToken } from "./auth.ts";
+import { getGame, removeGame } from "./game.ts";
 import {
   getOrCreateHttpServer,
   getOrCreateIo,
@@ -11,6 +12,7 @@ import {
   saveHotData,
   swapExpressApp,
 } from "./hot-reload.ts";
+import { getAllLobbyRoomIds, getOrCreateLobby } from "./lobby.ts";
 import { registerHandlers } from "./socket-handlers.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +35,17 @@ app.post("/api/token", async (req, res) => {
   } catch {
     res.status(500).json({ error: "Token exchange failed" });
   }
+});
+
+app.post("/clear", (_req, res) => {
+  for (const roomId of getAllLobbyRoomIds()) {
+    if (!getGame(roomId)) continue;
+    removeGame(roomId);
+    const lobby = getOrCreateLobby(roomId);
+    lobby.resetForNewGame();
+    io.to(roomId).emit("lobby:reset", lobby.getState());
+  }
+  res.json({ ok: true });
 });
 
 const httpServer = getOrCreateHttpServer(import.meta.hot);

@@ -131,3 +131,7 @@ export function removeLobbyIfEmpty(roomId: string): void {
     lobbies.delete(roomId);
   }
 }
+
+export function getAllLobbyRoomIds(): string[] {
+  return [...lobbies.keys()];
+}

@@ -59,6 +59,12 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
 
       const existingGame = getGame(roomId);
       if (existingGame?.getPlayerIds().includes(user.id)) {
+        const lobby = getOrCreateLobby(roomId);
+        const oldSocketId = lobby.updateSocketId(socket.id, user.id);
+        if (oldSocketId) {
+          socketRooms.delete(oldSocketId);
+        }
+
         socketRooms.set(socket.id, { roomId, playerId: user.id });
         await socket.join(roomId);
         socket.emit("game:state", existingGame.getStateForPlayer(user.id));
