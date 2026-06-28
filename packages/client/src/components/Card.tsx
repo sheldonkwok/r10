@@ -224,7 +224,7 @@ export function Card({
               >
                 10
               </span>
-              <PixelGrid grid={SUIT_PIXELS.heart} color={fg} cell={Math.max(1, Math.round(px * 1.1))} />
+              <PixelGrid grid={SUIT_PIXELS[glyph]} color={fg} cell={Math.max(1, Math.round(px * 1.1))} />
             </div>
           ) : isFace ? (
             <PixelGrid
