@@ -1,4 +1,15 @@
 import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { arrayMove, horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   canPlay,
   chaGoEligibility,
   isValidChaGoPlay as checkValidChaGoPlay,
@@ -6,7 +17,7 @@ import {
   type GameState,
   play,
 } from "game";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useMobile } from "@/hooks/useMobile.ts";
 import { useStageScale } from "@/hooks/useStageScale.ts";
 import { Card } from "./Card.tsx";
@@ -37,12 +48,44 @@ interface GameProps {
   onResetGame: () => void;
 }
 
+interface SortableHandCardProps {
+  id: string;
+  marginLeft: number;
+  scale: number;
+  children: ReactNode;
+}
+
+function SortableHandCard({ id, marginLeft, scale, children }: SortableHandCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  // dnd-kit reports pointer/layout deltas in screen px, but they're applied inside a
+  // CSS-scaled container — divide by scale so on-screen movement matches the cursor.
+  const adjusted = transform ? { ...transform, x: transform.x / scale, y: transform.y / scale } : null;
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{
+        marginLeft,
+        transform: CSS.Transform.toString(adjusted),
+        transition,
+        zIndex: isDragging ? 50 : undefined,
+        position: isDragging ? "relative" : undefined,
+        touchAction: "none",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }: GameProps) {
   const isMobile = useMobile();
   const SW = isMobile ? MOBILE_W : STAGE_W;
   const SH = isMobile ? MOBILE_H : STAGE_H;
 
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [localHand, setLocalHand] = useState<GamePlayer["hand"]>([]);
   const [revealAll, setRevealAll] = useState(false);
   const scale = useStageScale(SW, SH);
 
@@ -63,6 +106,18 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     setSelectedIndices(new Set());
   }, [state.currentTurn, state.currentPlay]);
 
+  const handKey =
+    currentPlayer?.hand
+      .map((c) => `${c.rank}${c.suit.short}`)
+      .sort()
+      .join(",") ?? "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handKey encodes full hand identity
+  useEffect(() => {
+    if (!currentPlayer) return;
+    setLocalHand(currentPlayer.hand);
+    setSelectedIndices(new Set());
+  }, [handKey]);
+
   const toggleCard = (index: number) => {
     setSelectedIndices((prev) => {
       const next = new Set(prev);
@@ -72,15 +127,45 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     });
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const handleDragStart = useCallback((_event: DragStartEvent) => {
+    setSelectedIndices(new Set());
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setLocalHand((prev) => {
+      const oldIndex = prev.findIndex((c) => `${c.rank}-${c.suit.short}` === active.id);
+      const newIndex = prev.findIndex((c) => `${c.rank}-${c.suit.short}` === over.id);
+      if (oldIndex < 0 || newIndex < 0) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  }, []);
+
   const sortedIndices = useMemo(() => [...selectedIndices].sort((a, b) => a - b), [selectedIndices]);
 
-  const selectedCards = useMemo(() => {
+  const selectedCards = useMemo(
+    () =>
+      sortedIndices
+        .filter((i) => i < localHand.length)
+        .map((i) => localHand[i])
+        .filter((c) => c !== undefined),
+    [localHand, sortedIndices],
+  );
+
+  const serverSortedIndices = useMemo(() => {
     if (!currentPlayer) return [];
     return sortedIndices
-      .filter((i) => i < currentPlayer.hand.length)
-      .map((i) => currentPlayer.hand[i])
-      .filter((c) => c !== undefined);
-  }, [currentPlayer, sortedIndices]);
+      .map((localIdx) => {
+        const card = localHand[localIdx];
+        if (!card) return -1;
+        return currentPlayer.hand.findIndex((c) => c.rank === card.rank && c.suit.short === card.suit.short);
+      })
+      .filter((i) => i >= 0)
+      .sort((a, b) => a - b);
+  }, [sortedIndices, localHand, currentPlayer]);
 
   const selectedPlay = useMemo(() => {
     if (selectedCards.length === 0) return null;
@@ -88,13 +173,13 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   }, [selectedCards]);
 
   const isValidPlay = useMemo(
-    () => canPlay(state, currentUserId, sortedIndices).valid,
-    [state, currentUserId, sortedIndices],
+    () => canPlay(state, currentUserId, serverSortedIndices).valid,
+    [state, currentUserId, serverSortedIndices],
   );
 
   const isValidChaGoPlay = useMemo(
-    () => checkValidChaGoPlay(state, currentUserId, sortedIndices),
-    [state, currentUserId, sortedIndices],
+    () => checkValidChaGoPlay(state, currentUserId, serverSortedIndices),
+    [state, currentUserId, serverSortedIndices],
   );
 
   const canPass = state.currentPlay !== null && state.lastPlayerId !== currentUserId;
@@ -103,7 +188,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     const validNormal = isValidPlay && isMyTurn;
     const validChaGo = isValidChaGoPlay && isEligibleForChaGo;
     if (!validNormal && !validChaGo) return;
-    onPlayCards(sortedIndices);
+    onPlayCards(serverSortedIndices);
   };
 
   const opponents = useMemo(() => {
@@ -449,41 +534,58 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
         {!isMobile && (
           <>
             {currentPlayer && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  bottom: 28,
-                  transform: "translateX(-50%)",
-                  display: "flex",
-                  zIndex: 6,
-                }}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
               >
-                {currentPlayer.hand.map((c, i) => {
-                  const cnt = currentPlayer.hand.length;
-                  const angle = (i - (cnt - 1) / 2) * handFanMult;
-                  const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
-                  const isSel = selectedIndices.has(i);
-                  return (
-                    <div
-                      key={`${c.rank}-${c.suit.short}-${i}`}
-                      style={{ marginLeft: i === 0 ? 0 : handOverlap }}
-                    >
-                      <Card
-                        rank={c.rank}
-                        suitShort={c.suit.short as SuitShort}
-                        width={handCardW}
-                        height={handCardH}
-                        rotate={angle}
-                        selectable={canInteract}
-                        selected={isSel}
-                        glow={isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null}
-                        onClick={canInteract ? () => toggleCard(i) : undefined}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                <SortableContext
+                  items={localHand.map((c) => `${c.rank}-${c.suit.short}`)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      bottom: 28,
+                      transform: "translateX(-50%)",
+                      display: "flex",
+                      zIndex: 6,
+                    }}
+                  >
+                    {localHand.map((c, i) => {
+                      const cnt = localHand.length;
+                      const angle = (i - (cnt - 1) / 2) * handFanMult;
+                      const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
+                      const isSel = selectedIndices.has(i);
+                      const id = `${c.rank}-${c.suit.short}`;
+                      return (
+                        <SortableHandCard
+                          key={id}
+                          id={id}
+                          marginLeft={i === 0 ? 0 : handOverlap}
+                          scale={scale}
+                        >
+                          <Card
+                            rank={c.rank}
+                            suitShort={c.suit.short as SuitShort}
+                            width={handCardW}
+                            height={handCardH}
+                            rotate={angle}
+                            selectable={canInteract}
+                            selected={isSel}
+                            glow={
+                              isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null
+                            }
+                            onClick={canInteract ? () => toggleCard(i) : undefined}
+                          />
+                        </SortableHandCard>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
 
             {canInteract && state.winningTeam === null && (
@@ -595,42 +697,58 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
 
             {/* Mobile hand */}
             {currentPlayer && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 78,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  display: "flex",
-                  zIndex: 7,
-                }}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
               >
-                {currentPlayer.hand.map((c, i) => {
-                  const cnt = currentPlayer.hand.length;
-                  const angle = (i - (cnt - 1) / 2) * handFanMult;
-                  const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
-                  const isSel = selectedIndices.has(i);
-                  return (
-                    <div
-                      // biome-ignore lint/suspicious/noArrayIndexKey: hand index is stable within turn
-                      key={i}
-                      style={{ marginLeft: i === 0 ? 0 : handOverlap }}
-                    >
-                      <Card
-                        rank={c.rank}
-                        suitShort={c.suit.short as SuitShort}
-                        width={handCardW}
-                        height={handCardH}
-                        rotate={angle}
-                        selectable={canInteract}
-                        selected={isSel}
-                        glow={isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null}
-                        onClick={canInteract ? () => toggleCard(i) : undefined}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                <SortableContext
+                  items={localHand.map((c) => `${c.rank}-${c.suit.short}`)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 78,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      display: "flex",
+                      zIndex: 7,
+                    }}
+                  >
+                    {localHand.map((c, i) => {
+                      const cnt = localHand.length;
+                      const angle = (i - (cnt - 1) / 2) * handFanMult;
+                      const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
+                      const isSel = selectedIndices.has(i);
+                      const id = `${c.rank}-${c.suit.short}`;
+                      return (
+                        <SortableHandCard
+                          key={id}
+                          id={id}
+                          marginLeft={i === 0 ? 0 : handOverlap}
+                          scale={scale}
+                        >
+                          <Card
+                            rank={c.rank}
+                            suitShort={c.suit.short as SuitShort}
+                            width={handCardW}
+                            height={handCardH}
+                            rotate={angle}
+                            selectable={canInteract}
+                            selected={isSel}
+                            glow={
+                              isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null
+                            }
+                            onClick={canInteract ? () => toggleCard(i) : undefined}
+                          />
+                        </SortableHandCard>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
 
             {/* Mobile thumb buttons */}
