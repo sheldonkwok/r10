@@ -1,14 +1,5 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  type DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { arrayMove, horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   canPlay,
   chaGoEligibility,
@@ -17,10 +8,15 @@ import {
   type GameState,
   play,
 } from "game";
-import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMobile } from "@/hooks/useMobile.ts";
 import { useStageScale } from "@/hooks/useStageScale.ts";
-import { Card } from "./Card.tsx";
+import { GameOverOverlay } from "./game/GameOverOverlay.tsx";
+import { HandFan } from "./game/HandFan.tsx";
+import { MHomeBar, MStatusBar } from "./game/MobileChrome.tsx";
+import { MobileSideOpponent, MobileTopOpponent } from "./game/MobileOpponents.tsx";
+import { OpponentToken } from "./game/OpponentToken.tsx";
+import { Pile } from "./game/Pile.tsx";
 import { FeltTable } from "./pixel/FeltTable.tsx";
 import { PixelButton } from "./pixel/PixelButton.tsx";
 import { PixelPanel } from "./pixel/PixelPanel.tsx";
@@ -38,45 +34,12 @@ const OPPONENT_POSITIONS: Array<{ x: number; y: number }> = [
   { x: 1170, y: 380 },
 ];
 
-type SuitShort = "h" | "d" | "c" | "s";
-
 interface GameProps {
   state: GameState;
   currentUserId: string;
   onPlayCards: (cardIndices: number[]) => void;
   onPass: () => void;
   onResetGame: () => void;
-}
-
-interface SortableHandCardProps {
-  id: string;
-  marginLeft: number;
-  scale: number;
-  children: ReactNode;
-}
-
-function SortableHandCard({ id, marginLeft, scale, children }: SortableHandCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  // dnd-kit reports pointer/layout deltas in screen px, but they're applied inside a
-  // CSS-scaled container — divide by scale so on-screen movement matches the cursor.
-  const adjusted = transform ? { ...transform, x: transform.x / scale, y: transform.y / scale } : null;
-  return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={{
-        marginLeft,
-        transform: CSS.Transform.toString(adjusted),
-        transition,
-        zIndex: isDragging ? 50 : undefined,
-        position: isDragging ? "relative" : undefined,
-        touchAction: "none",
-      }}
-    >
-      {children}
-    </div>
-  );
 }
 
 export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }: GameProps) {
@@ -403,57 +366,13 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
         )}
 
         {/* ── PILE ── */}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: isMobile ? 310 : "44%",
-            transform: isMobile ? "translateX(-50%)" : "translate(-50%, -50%)",
-            display: "flex",
-            zIndex: 4,
-          }}
-        >
-          {state.currentPlay ? (
-            state.currentPlay.cards.map((c, i) => {
-              const cnt = state.currentPlay?.cards.length ?? 1;
-              const angle = (i - (cnt - 1) / 2) * 6;
-              return (
-                <div key={`${c.rank}-${c.suit.short}-${i}`} style={{ marginLeft: i === 0 ? 0 : 6 }}>
-                  <Card
-                    rank={c.rank}
-                    suitShort={c.suit.short as SuitShort}
-                    width={pileCardW}
-                    height={pileCardH}
-                    rotate={angle}
-                  />
-                </div>
-              );
-            })
-          ) : (
-            <div
-              className="font-pixel text-[10px] tracking-widest"
-              style={{ color: "var(--color-paper-muted)" }}
-            >
-              ◂ EMPTY PILE ▸
-            </div>
-          )}
-        </div>
-        {state.currentPlay && (
-          <div
-            className="font-pixel text-[9px] tracking-widest"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: isMobile ? 424 : "61%",
-              transform: "translateX(-50%)",
-              color: "var(--color-paper-muted)",
-              zIndex: 4,
-              whiteSpace: "nowrap",
-            }}
-          >
-            ◂ {pilePlayer?.username.toUpperCase() ?? ""} PLAYED ▸
-          </div>
-        )}
+        <Pile
+          currentPlay={state.currentPlay}
+          pilePlayer={pilePlayer}
+          isMobile={isMobile}
+          pileCardW={pileCardW}
+          pileCardH={pileCardH}
+        />
 
         {/* ── TURN INDICATOR ── */}
         {state.winningTeam === null && (
@@ -534,58 +453,21 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
         {!isMobile && (
           <>
             {currentPlayer && (
-              <DndContext
+              <HandFan
+                hand={localHand}
+                selectedIndices={selectedIndices}
+                canInteract={canInteract}
+                scale={scale}
                 sensors={sensors}
-                collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={localHand.map((c) => `${c.rank}-${c.suit.short}`)}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      bottom: 28,
-                      transform: "translateX(-50%)",
-                      display: "flex",
-                      zIndex: 6,
-                    }}
-                  >
-                    {localHand.map((c, i) => {
-                      const cnt = localHand.length;
-                      const angle = (i - (cnt - 1) / 2) * handFanMult;
-                      const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
-                      const isSel = selectedIndices.has(i);
-                      const id = `${c.rank}-${c.suit.short}`;
-                      return (
-                        <SortableHandCard
-                          key={id}
-                          id={id}
-                          marginLeft={i === 0 ? 0 : handOverlap}
-                          scale={scale}
-                        >
-                          <Card
-                            rank={c.rank}
-                            suitShort={c.suit.short as SuitShort}
-                            width={handCardW}
-                            height={handCardH}
-                            rotate={angle}
-                            selectable={canInteract}
-                            selected={isSel}
-                            glow={
-                              isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null
-                            }
-                            onClick={canInteract ? () => toggleCard(i) : undefined}
-                          />
-                        </SortableHandCard>
-                      );
-                    })}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                onToggleCard={toggleCard}
+                handCardW={handCardW}
+                handCardH={handCardH}
+                handOverlap={handOverlap}
+                handFanMult={handFanMult}
+                containerStyle={{ bottom: 28, zIndex: 6 }}
+              />
             )}
 
             {canInteract && state.winningTeam === null && (
@@ -697,58 +579,21 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
 
             {/* Mobile hand */}
             {currentPlayer && (
-              <DndContext
+              <HandFan
+                hand={localHand}
+                selectedIndices={selectedIndices}
+                canInteract={canInteract}
+                scale={scale}
                 sensors={sensors}
-                collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={localHand.map((c) => `${c.rank}-${c.suit.short}`)}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 78,
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      display: "flex",
-                      zIndex: 7,
-                    }}
-                  >
-                    {localHand.map((c, i) => {
-                      const cnt = localHand.length;
-                      const angle = (i - (cnt - 1) / 2) * handFanMult;
-                      const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
-                      const isSel = selectedIndices.has(i);
-                      const id = `${c.rank}-${c.suit.short}`;
-                      return (
-                        <SortableHandCard
-                          key={id}
-                          id={id}
-                          marginLeft={i === 0 ? 0 : handOverlap}
-                          scale={scale}
-                        >
-                          <Card
-                            rank={c.rank}
-                            suitShort={c.suit.short as SuitShort}
-                            width={handCardW}
-                            height={handCardH}
-                            rotate={angle}
-                            selectable={canInteract}
-                            selected={isSel}
-                            glow={
-                              isSel ? "var(--color-accent)" : isRedTen ? "var(--color-team-red-glow)" : null
-                            }
-                            onClick={canInteract ? () => toggleCard(i) : undefined}
-                          />
-                        </SortableHandCard>
-                      );
-                    })}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                onToggleCard={toggleCard}
+                handCardW={handCardW}
+                handCardH={handCardH}
+                handOverlap={handOverlap}
+                handFanMult={handFanMult}
+                containerStyle={{ top: 78, zIndex: 7 }}
+              />
             )}
 
             {/* Mobile thumb buttons */}
@@ -791,482 +636,13 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
         {isMobile && <MHomeBar />}
 
         {/* ── GAME OVER OVERLAY ── */}
-        {state.winningTeam !== null && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(10, 6, 4, 0.78)",
-              zIndex: 50,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: isMobile ? 20 : 0,
-            }}
-          >
-            <PixelPanel
-              width={isMobile ? "100%" : 520}
-              accent={
-                state.winningTeam === "wash"
-                  ? "var(--color-paper-dim)"
-                  : state.winningTeam === "red"
-                    ? "var(--color-team-red)"
-                    : "var(--color-paper)"
-              }
-              glow={
-                state.winningTeam === "red"
-                  ? "var(--color-team-red-glow)"
-                  : "color-mix(in srgb, var(--color-accent) 50%, transparent)"
-              }
-              style={{ padding: 24, textAlign: "center" }}
-            >
-              <div className="font-pixel text-[10px] tracking-widest text-[color:var(--color-paper-dim)]">
-                ROUND COMPLETE
-              </div>
-              <div
-                className="font-pixel mt-3"
-                style={{
-                  fontSize: isMobile ? 22 : 28,
-                  letterSpacing: 6,
-                  color:
-                    state.winningTeam === "wash"
-                      ? "var(--color-paper-dim)"
-                      : state.winningTeam === "red"
-                        ? "var(--color-team-red)"
-                        : "var(--color-paper)",
-                  textShadow: "3px 3px 0 #000",
-                }}
-              >
-                {state.winningTeam === "wash" ? "WASH · TIE" : `${state.winningTeam.toUpperCase()} TEAM WINS`}
-              </div>
-              {state.firstFinisherId && (
-                <div className="font-pixel text-[9px] tracking-widest text-[color:var(--color-accent)] mt-3">
-                  ★ FIRST OUT:{" "}
-                  {state.players.find((p) => p.id === state.firstFinisherId)?.username.toUpperCase()}
-                </div>
-              )}
-              {state.losingTeam && (
-                <div className="font-pixel text-[8px] tracking-wider text-[color:var(--color-paper-muted)] mt-2">
-                  LOSING TEAM: {state.losingTeam.toUpperCase()}
-                </div>
-              )}
-              {state.hostId === currentUserId && (
-                <div style={{ marginTop: 18, display: "flex", justifyContent: "center" }}>
-                  <PixelButton
-                    tone="accent"
-                    onClick={onResetGame}
-                    style={isMobile ? { width: "100%", padding: "20px 0", fontSize: 14 } : undefined}
-                  >
-                    NEXT ROUND ▸
-                  </PixelButton>
-                </div>
-              )}
-            </PixelPanel>
-          </div>
-        )}
+        <GameOverOverlay
+          state={state}
+          currentUserId={currentUserId}
+          isMobile={isMobile}
+          onResetGame={onResetGame}
+        />
       </div>
     </div>
-  );
-}
-
-// ── Desktop opponent token ──────────────────────────────────────
-
-interface OpponentTokenProps {
-  player: GamePlayer;
-  position: { x: number; y: number };
-  isTheirTurn: boolean;
-  isFirstOut: boolean;
-  revealHand: boolean;
-}
-
-function OpponentToken({ player, position, isTheirTurn, isFirstOut, revealHand }: OpponentTokenProps) {
-  const teamColor =
-    player.team === "red"
-      ? "var(--color-team-red)"
-      : player.team === "black"
-        ? "var(--color-team-black)"
-        : null;
-  const teamGlow =
-    player.team === "red"
-      ? "var(--color-team-red-glow)"
-      : player.team === "black"
-        ? "var(--color-team-black-glow)"
-        : null;
-
-  const avatarBoxShadow = teamColor
-    ? `inset 0 0 0 3px ${teamColor}, 0 0 12px ${teamGlow}`
-    : "inset 0 0 0 3px var(--color-panel-border)";
-
-  const turnRingStyle: CSSProperties | undefined = isTheirTurn
-    ? {
-        position: "absolute",
-        inset: -6,
-        boxShadow:
-          "0 0 0 3px var(--color-accent), 0 0 16px color-mix(in srgb, var(--color-accent) 67%, transparent)",
-        pointerEvents: "none",
-      }
-    : undefined;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: position.x,
-        top: position.y,
-        transform: "translate(-50%, -50%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-        zIndex: 4,
-      }}
-    >
-      <div style={{ position: "relative", width: 88, height: 56, marginBottom: -4 }}>
-        {revealHand
-          ? player.hand.slice(0, 5).map((c, k) => (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: small fan, stable order
-                key={k}
-                style={{
-                  position: "absolute",
-                  left: 44 + (k - 2) * 14 - 18,
-                  top: 0,
-                  transform: `rotate(${(k - 2) * 8}deg)`,
-                  transformOrigin: "bottom center",
-                }}
-              >
-                <Card rank={c.rank} suitShort={c.suit.short as SuitShort} width={36} height={52} />
-              </div>
-            ))
-          : [-1, 0, 1].map((k, idx) => (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: 3-card fan, stable order
-                key={idx}
-                style={{
-                  position: "absolute",
-                  left: 44 + k * 12 - 18,
-                  top: 0,
-                  transform: `rotate(${k * 12}deg)`,
-                  transformOrigin: "bottom center",
-                }}
-              >
-                <Card faceDown width={36} height={52} />
-              </div>
-            ))}
-      </div>
-
-      <div style={{ position: "relative" }}>
-        {turnRingStyle && <div style={turnRingStyle} />}
-        <div
-          style={{
-            width: 56,
-            height: 56,
-            background: "var(--color-panel)",
-            boxShadow: avatarBoxShadow,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={player.avatarUrl}
-            alt={player.username}
-            width={56}
-            height={56}
-            style={{ display: "block", imageRendering: "pixelated" }}
-          />
-        </div>
-      </div>
-
-      <div
-        className="font-pixel"
-        style={{
-          fontSize: 8,
-          color: "var(--color-paper)",
-          letterSpacing: 1,
-          textShadow: "1px 1px 0 #000",
-          maxWidth: 96,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {player.username.toUpperCase()}
-      </div>
-      <div
-        className="font-pixel"
-        style={{
-          fontSize: 7,
-          color: isFirstOut ? "var(--color-accent)" : "var(--color-paper-dim)",
-          letterSpacing: 1,
-        }}
-      >
-        {isFirstOut ? "★ FIRST OUT" : `▮ ${player.handSize}`}
-      </div>
-    </div>
-  );
-}
-
-// ── Mobile opponent tokens ──────────────────────────────────────
-
-interface MobileTopOpponentProps {
-  player: GamePlayer;
-  x: number;
-  y: number;
-  isTheirTurn: boolean;
-  isFirstOut: boolean;
-}
-
-function MobileTopOpponent({ player, x, y, isTheirTurn, isFirstOut }: MobileTopOpponentProps) {
-  const teamColor =
-    player.team === "red"
-      ? "var(--color-team-red)"
-      : player.team === "black"
-        ? "var(--color-team-black)"
-        : null;
-  const teamGlow =
-    player.team === "red"
-      ? "var(--color-team-red-glow)"
-      : player.team === "black"
-        ? "var(--color-team-black-glow)"
-        : null;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        transform: "translateX(-50%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-        zIndex: 4,
-      }}
-    >
-      <div style={{ position: "relative", width: 44, height: 28, marginBottom: -2 }}>
-        {([-1, 0, 1] as const).map((k, idx) => (
-          <div
-            // biome-ignore lint/suspicious/noArrayIndexKey: 3-card fan, stable order
-            key={idx}
-            style={{
-              position: "absolute",
-              left: 22 + k * 8 - 11,
-              top: 0,
-              transform: `rotate(${k * 12}deg)`,
-              transformOrigin: "bottom center",
-            }}
-          >
-            <Card faceDown width={22} height={32} />
-          </div>
-        ))}
-      </div>
-
-      <div style={{ position: "relative" }}>
-        {isTheirTurn && (
-          <div
-            style={{
-              position: "absolute",
-              inset: -4,
-              boxShadow:
-                "0 0 0 2px var(--color-accent), 0 0 10px color-mix(in srgb, var(--color-accent) 67%, transparent)",
-              pointerEvents: "none",
-            }}
-          />
-        )}
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            background: "var(--color-panel)",
-            boxShadow: teamColor
-              ? `inset 0 0 0 3px ${teamColor}, 0 0 10px ${teamGlow}`
-              : "inset 0 0 0 3px var(--color-panel-border)",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={player.avatarUrl}
-            alt={player.username}
-            width={40}
-            height={40}
-            style={{ display: "block", imageRendering: "pixelated" }}
-          />
-        </div>
-      </div>
-
-      <div
-        className="font-pixel"
-        style={{
-          fontSize: 7,
-          color: "var(--color-paper)",
-          letterSpacing: 1,
-          textShadow: "1px 1px 0 #000",
-          maxWidth: 70,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {player.username.toUpperCase()}
-      </div>
-      <div
-        className="font-pixel"
-        style={{
-          fontSize: 6,
-          color: isFirstOut ? "var(--color-accent)" : "var(--color-paper-dim)",
-          letterSpacing: 1,
-        }}
-      >
-        {isFirstOut ? "★1ST" : `▮ ${player.handSize}`}
-      </div>
-    </div>
-  );
-}
-
-interface MobileSideOpponentProps {
-  player: GamePlayer;
-  side: "left" | "right";
-  y: number;
-  isTheirTurn: boolean;
-  isFirstOut: boolean;
-}
-
-function MobileSideOpponent({ player, side, y, isTheirTurn, isFirstOut }: MobileSideOpponentProps) {
-  const teamColor =
-    player.team === "red"
-      ? "var(--color-team-red)"
-      : player.team === "black"
-        ? "var(--color-team-black)"
-        : null;
-  const teamGlow =
-    player.team === "red"
-      ? "var(--color-team-red-glow)"
-      : player.team === "black"
-        ? "var(--color-team-black-glow)"
-        : null;
-
-  const posStyle: CSSProperties =
-    side === "left"
-      ? { position: "absolute", left: 14, top: y }
-      : { position: "absolute", right: 14, top: y };
-
-  return (
-    <div
-      style={{
-        ...posStyle,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 3,
-        zIndex: 4,
-      }}
-    >
-      <div style={{ position: "relative" }}>
-        {isTheirTurn && (
-          <div
-            style={{
-              position: "absolute",
-              inset: -3,
-              boxShadow:
-                "0 0 0 2px var(--color-accent), 0 0 8px color-mix(in srgb, var(--color-accent) 67%, transparent)",
-              pointerEvents: "none",
-            }}
-          />
-        )}
-        <div
-          style={{
-            width: 38,
-            height: 38,
-            background: "var(--color-panel)",
-            boxShadow: teamColor
-              ? `inset 0 0 0 3px ${teamColor}, 0 0 10px ${teamGlow}`
-              : "inset 0 0 0 3px var(--color-panel-border)",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={player.avatarUrl}
-            alt={player.username}
-            width={38}
-            height={38}
-            style={{ display: "block", imageRendering: "pixelated" }}
-          />
-        </div>
-      </div>
-      <div
-        className="font-pixel"
-        style={{
-          fontSize: 6,
-          color: "var(--color-paper)",
-          letterSpacing: 1,
-          textShadow: "1px 1px 0 #000",
-          maxWidth: 50,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {player.username.toUpperCase()}
-      </div>
-      <div
-        className="font-pixel"
-        style={{ fontSize: 6, color: isFirstOut ? "var(--color-accent)" : "var(--color-paper-dim)" }}
-      >
-        {isFirstOut ? "★1ST" : `▮ ${player.handSize}`}
-      </div>
-    </div>
-  );
-}
-
-// ── Mobile chrome (decorative) ──────────────────────────────────
-
-function MStatusBar() {
-  return (
-    <div
-      className="font-pixel"
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 40,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 24px",
-        zIndex: 80,
-        fontSize: 10,
-        color: "var(--color-paper)",
-        letterSpacing: 1,
-      }}
-    >
-      <div>9:41</div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <span style={{ fontSize: 8 }}>▮▮▮</span>
-        <span style={{ fontSize: 8 }}>≋</span>
-        <span style={{ fontSize: 8 }}>96%</span>
-      </div>
-    </div>
-  );
-}
-
-function MHomeBar() {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: 8,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: 130,
-        height: 5,
-        background: "var(--color-paper)",
-        opacity: 0.5,
-        zIndex: 95,
-      }}
-    />
   );
 }
