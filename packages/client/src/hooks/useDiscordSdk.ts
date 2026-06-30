@@ -19,6 +19,7 @@ interface UseDiscordSdkResult {
   auth: Auth | null;
   error: string | null;
   needsUsername: boolean;
+  isTestMode: boolean;
   setWebUsername: (username: string) => void;
 }
 
@@ -31,6 +32,8 @@ export function useDiscordSdk(): UseDiscordSdkResult {
   const [auth, setAuth] = useState<Auth | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsUsername, setNeedsUsername] = useState(false);
+
+  const isTestMode = new URLSearchParams(window.location.search).has("test");
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +51,16 @@ export function useDiscordSdk(): UseDiscordSdkResult {
           setAuth({
             accessToken: token,
             user: { id: storedUserId, username: storedUsername, avatar: null, global_name: storedUsername },
+          });
+          setSdk({ channelId: getWebRoomId() } as DiscordSDKType);
+        } else if (isTestMode) {
+          // In test mode, auto-authenticate without requiring a username prompt.
+          const userId = `web-test-${Math.random().toString(36).slice(2, 8)}`;
+          const username = "TestBot";
+          const token = `web-token:${userId}:${encodeURIComponent(username)}`;
+          setAuth({
+            accessToken: token,
+            user: { id: userId, username, avatar: null, global_name: username },
           });
           setSdk({ channelId: getWebRoomId() } as DiscordSDKType);
         } else {
@@ -104,7 +117,7 @@ export function useDiscordSdk(): UseDiscordSdkResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isTestMode]);
 
   const setWebUsername = useCallback((username: string) => {
     let userId = localStorage.getItem("web:userId");
@@ -123,5 +136,5 @@ export function useDiscordSdk(): UseDiscordSdkResult {
     setNeedsUsername(false);
   }, []);
 
-  return { sdk, auth, error, needsUsername, setWebUsername };
+  return { sdk, auth, error, needsUsername, isTestMode, setWebUsername };
 }

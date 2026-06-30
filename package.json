@@ -7,10 +7,12 @@
     "build": "pnpm --filter client build",
     "test": "pnpm -r test",
     "start": "node --experimental-strip-types packages/server/src/index.ts",
-    "check": "pnpm -r exec tsc --noEmit && biome check --write --error-on-warnings . && pnpm test"
+    "check": "pnpm -r exec tsc --noEmit && biome check --write --error-on-warnings . && pnpm test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
+    "@playwright/test": "^1.61.1",
     "typescript": "^5.0.0",
     "vite": "^6.4.1"
   }

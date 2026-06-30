@@ -4,3 +4,7 @@ dist
 .envrc
 
 .claude/worktrees
+
+# Playwright
+playwright-report/
+test-results/

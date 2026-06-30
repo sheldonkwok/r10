@@ -49,6 +49,8 @@ export interface ClientToServerEvents {
   "lobby:join": (data: { roomId: string; token: string }) => void;
   "lobby:ready": () => void;
   "lobby:start": () => void;
+  /** Dev only: start an all-bot game without human interaction. */
+  "lobby:start-test": () => void;
   "lobby:leave": () => void;
   "game:play": (data: { cardIndices: number[] }) => void;
   "game:pass": () => void;

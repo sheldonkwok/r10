@@ -29,13 +29,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function processBotTurns(io: IOServer, roomId: string, game: Game) {
+async function processBotTurns(io: IOServer, roomId: string, game: Game, delayMs = 100) {
   let safety = 0;
-  const maxIterations = 100;
+  const maxIterations = 1000;
 
   while (game.isCurrentPlayerBot() && safety < maxIterations) {
     safety++;
-    await sleep(100);
+    if (game.getState().winningTeam !== null) break;
+    await sleep(delayMs);
     if (getGame(roomId) !== game) break; // game was removed (reset) or replaced
     try {
       game.makeBotPlay();
@@ -120,6 +121,21 @@ export function registerHandlers(io: IOServer, socket: IOSocket) {
     const game = createGame(meta.roomId, lobby.getState().players);
     sendGameStateToPlayers(io, meta.roomId, game);
     processBotTurns(io, meta.roomId, game);
+  });
+
+  socket.on("lobby:start-test", () => {
+    if (!isDev) return;
+    const meta = socketRooms.get(socket.id);
+    if (!meta) return;
+
+    const lobby = getOrCreateLobby(meta.roomId);
+    if (!lobby.isHost(socket.id)) return;
+
+    lobby.fillWithBots();
+    lobby.markAllAsBots();
+    const game = createGame(meta.roomId, lobby.getState().players);
+    sendGameStateToPlayers(io, meta.roomId, game);
+    processBotTurns(io, meta.roomId, game, 10);
   });
 
   socket.on("game:play", ({ cardIndices }) => {

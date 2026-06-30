@@ -48,7 +48,7 @@ export function HandFan({
       onDragEnd={onDragEnd}
     >
       <SortableContext
-        items={hand.map((c) => `${c.rank}-${c.suit.short}`)}
+        items={hand.map((c, i) => `${i}-${c.rank}-${c.suit.short}`)}
         strategy={horizontalListSortingStrategy}
       >
         <div
@@ -65,7 +65,7 @@ export function HandFan({
             const angle = (i - (cnt - 1) / 2) * handFanMult;
             const isRedTen = c.rank === 10 && (c.suit.short === "h" || c.suit.short === "d");
             const isSel = selectedIndices.has(i);
-            const id = `${c.rank}-${c.suit.short}`;
+            const id = `${i}-${c.rank}-${c.suit.short}`;
             return (
               <SortableHandCard key={id} id={id} marginLeft={i === 0 ? 0 : handOverlap} scale={scale}>
                 <Card

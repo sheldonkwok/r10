@@ -83,6 +83,12 @@ export class Lobby {
     }
   }
 
+  markAllAsBots(): void {
+    for (const player of this.players.values()) {
+      player.isBot = true;
+    }
+  }
+
   resetForNewGame(): void {
     for (const [socketId, player] of this.players) {
       if (player.isBot) {

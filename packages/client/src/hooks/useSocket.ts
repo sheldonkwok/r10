@@ -15,17 +15,19 @@ interface UseSocketResult {
   error: string | null;
 }
 
-export function useSocket(roomId: string | null, token: string | null): UseSocketResult {
+export function useSocket(roomId: string | null, token: string | null, testMode = false): UseSocketResult {
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<TypedSocket | null>(null);
+  const testStartedRef = useRef(false);
 
   useEffect(() => {
     if (!roomId || !token) return;
 
     const socket: TypedSocket = io({ path: "/socket.io" });
     socketRef.current = socket;
+    testStartedRef.current = false;
 
     socket.on("connect", () => {
       socket.emit("lobby:join", { roomId, token });
@@ -33,6 +35,10 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
 
     socket.on("lobby:state", (state) => {
       setLobbyState(state);
+      if (testMode && !testStartedRef.current) {
+        testStartedRef.current = true;
+        socket.emit("lobby:start-test");
+      }
     });
 
     socket.on("lobby:error", (message) => {
@@ -53,7 +59,7 @@ export function useSocket(roomId: string | null, token: string | null): UseSocke
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomId, token]);
+  }, [roomId, token, testMode]);
 
   const toggleReady = useCallback(() => {
     socketRef.current?.emit("lobby:ready");

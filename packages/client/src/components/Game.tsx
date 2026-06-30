@@ -66,7 +66,11 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional triggers, not read inside
   useEffect(() => {
-    setSelectedIndices(new Set());
+    // Use functional form: if already empty, return the same reference so React
+    // bails out and skips a re-render. Without this, rapid bot-play state updates
+    // (all with new object references for currentPlay) would cascade into the
+    // "maximum update depth exceeded" React error.
+    setSelectedIndices((prev) => (prev.size === 0 ? prev : new Set()));
   }, [state.currentTurn, state.currentPlay]);
 
   const handKey =
@@ -78,7 +82,7 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
   useEffect(() => {
     if (!currentPlayer) return;
     setLocalHand(currentPlayer.hand);
-    setSelectedIndices(new Set());
+    setSelectedIndices((prev) => (prev.size === 0 ? prev : new Set()));
   }, [handKey]);
 
   const toggleCard = (index: number) => {
@@ -100,8 +104,8 @@ export function Game({ state, currentUserId, onPlayCards, onPass, onResetGame }:
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setLocalHand((prev) => {
-      const oldIndex = prev.findIndex((c) => `${c.rank}-${c.suit.short}` === active.id);
-      const newIndex = prev.findIndex((c) => `${c.rank}-${c.suit.short}` === over.id);
+      const oldIndex = prev.findIndex((c, i) => `${i}-${c.rank}-${c.suit.short}` === active.id);
+      const newIndex = prev.findIndex((c, i) => `${i}-${c.rank}-${c.suit.short}` === over.id);
       if (oldIndex < 0 || newIndex < 0) return prev;
       return arrayMove(prev, oldIndex, newIndex);
     });

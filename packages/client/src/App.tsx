@@ -5,7 +5,7 @@ import { useDiscordSdk } from "./hooks/useDiscordSdk.ts";
 import { useSocket } from "./hooks/useSocket.ts";
 
 export function App() {
-  const { sdk, auth, error: sdkError, needsUsername, setWebUsername } = useDiscordSdk();
+  const { sdk, auth, error: sdkError, needsUsername, isTestMode, setWebUsername } = useDiscordSdk();
   const roomId = sdk?.channelId ?? null;
   const token = auth?.accessToken ?? null;
   const {
@@ -17,7 +17,7 @@ export function App() {
     pass,
     resetGame,
     error: socketError,
-  } = useSocket(roomId, token);
+  } = useSocket(roomId, token, isTestMode);
 
   const error = sdkError ?? socketError;
 
