@@ -73,5 +73,5 @@ export function avatarUrl(userId: string, avatar: string | null): string {
     return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png`;
   }
   const index = parseInt(userId, 10) % 5;
-  return `https://cdn.discordapp.com/embed/avatars/${Number.isNaN(index) ? 0 : index}.png`;
+  return `/avatars/default-${Number.isNaN(index) ? 0 : index}.svg`;
 }
