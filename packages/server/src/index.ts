@@ -4,7 +4,7 @@ import cors from "cors";
 import express from "express";
 import type { ClientToServerEvents, ServerToClientEvents } from "game";
 import { exchangeToken } from "./auth.ts";
-import { getGame, removeGame } from "./game.ts";
+import { removeGame } from "./game.ts";
 import {
   getOrCreateHttpServer,
   getOrCreateIo,
@@ -37,14 +37,12 @@ app.post("/api/token", async (req, res) => {
   }
 });
 
-app.post("/clear", (_req, res) => {
+app.post("/admin/reset", (_req, res) => {
   for (const roomId of getAllLobbyRoomIds()) {
-    if (!getGame(roomId)) continue;
     removeGame(roomId);
-    const lobby = getOrCreateLobby(roomId);
-    lobby.resetForNewGame();
-    io.to(roomId).emit("lobby:reset", lobby.getState());
+    getOrCreateLobby(roomId).resetForNewGame();
   }
+  io.disconnectSockets(true);
   res.json({ ok: true });
 });
 

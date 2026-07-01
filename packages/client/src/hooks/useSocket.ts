@@ -55,6 +55,14 @@ export function useSocket(roomId: string | null, token: string | null, testMode 
       setLobbyState(state);
     });
 
+    socket.on("disconnect", (reason) => {
+      setLobbyState(null);
+      setGameState(null);
+      if (reason === "io server disconnect") {
+        socket.connect();
+      }
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
