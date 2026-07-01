@@ -74,7 +74,7 @@ export class Lobby {
       this.players.set(botId, {
         id: botId,
         username: `Bot ${botNum}`,
-        avatarUrl: `https://cdn.discordapp.com/embed/avatars/${botNum % 5}.png`,
+        avatarUrl: `/avatars/default-${botNum % 5}.svg`,
         ready: true,
         isHost: false,
         isBot: true,
